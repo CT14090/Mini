@@ -436,7 +436,11 @@ class WindowCharacteristicAgent:
         # Group text by page
         page_texts = {}
         for element, _ in all_elements:
-            if isinstance(element, TextItem):
+            # Handle both Docling TextItem and fallback elements
+            is_text_element = (isinstance(element, TextItem) if not self.use_fallback 
+                             else hasattr(element, 'text'))
+            
+            if is_text_element:
                 page_num = self._get_page_number(element)
                 text_content = element.text if hasattr(element, 'text') else str(element)
                 

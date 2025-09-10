@@ -1,0 +1,9 @@
+{
+  "confidence_threshold": 0.4,
+  "min_section_length": 150,
+  "max_extractions": 20,
+  "image_size_min": 150,
+  "table_relevance_threshold": 2,
+  "cv_detection_threshold": 40,
+  "content_classification_threshold": 0.3
+}
