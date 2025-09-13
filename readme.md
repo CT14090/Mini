@@ -1,379 +1,248 @@
-# Specialized Window Characteristics Extraction Agent
+# Window Characteristics Extraction Agent
 
-An AI-powered system that focuses on extracting specific window characteristics from construction documents with targeted LLM feedback loops.
+AI-powered system for extracting specific window characteristics from construction documents with reference data matching and LLM feedback.
 
-## 🎯 Specialized Characteristics
+## Features
 
-The system focuses on four critical window characteristics:
+- **Text-First Approach**: Summarizes relevant text before extracting images/tables
+- **Reference Data Matching**: Uses your example images for better content identification
+- **LLM Feedback**: Azure OpenAI analyzes extractions and optimizes parameters
+- **Page Filtering**: Skips irrelevant pages (first 3 by default)
+- **4 Characteristics**: Anchors, Glazing, Impact Rating, Design Pressure
 
-### 1. **Anchor Types** 🔩
+## Quick Start
+
+### 1. Setup
+
+```bash
+python setup.py
+```
+
+### 2. Configure Azure OpenAI (Optional but Recommended)
+
+Edit `.env` file with your credentials:
+
+```
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
+```
+
+### 3. Add Reference Data
+
+Add example images to `labeled_data/{characteristic}/` folders:
+
+- `labeled_data/anchors/` - Anchor installation images
+- `labeled_data/glazing/` - Glass section images
+- `labeled_data/impact_rating/` - Test result images
+- `labeled_data/design_pressure/` - Pressure table images
+
+### 4. Extract Content
+
+```bash
+# Extract anchor information
+python adaptive_agent.py --source document.pdf --characteristic anchors
+
+# Extract with debug output
+python adaptive_agent.py --source document.pdf --characteristic glazing --debug
+```
+
+### 5. View Results
+
+```bash
+streamlit run feedback_interface.py
+```
+
+## Commands
+
+### Basic Extraction
+
+```bash
+python adaptive_agent.py --source document.pdf --characteristic anchors
+python adaptive_agent.py --source document.pdf --characteristic glazing
+python adaptive_agent.py --source document.pdf --characteristic impact_rating
+python adaptive_agent.py --source document.pdf --characteristic design_pressure
+```
+
+### Debug Mode
+
+```bash
+python adaptive_agent.py --source document.pdf --characteristic anchors --debug
+```
+
+### View Parameters
+
+```bash
+python adaptive_agent.py --test-params --characteristic anchors --source dummy
+```
+
+## File Structure
+
+```
+window-agent/
+├── adaptive_agent.py                 # Main extraction agent
+├── feedback_interface.py             # Streamlit viewer
+├── setup.py                         # Setup script
+├── requirements.txt                  # Dependencies
+├── .env                             # Azure OpenAI config
+│
+├── data/
+│   └── input_pdfs/                  # Place PDFs here
+│
+├── labeled_data/                    # Reference data
+│   ├── README.md                    # Reference instructions
+│   ├── anchors/
+│   │   ├── descriptions.json       # Anchor descriptions
+│   │   └── [reference images]      # Add .jpg/.png files
+│   ├── glazing/
+│   ├── impact_rating/
+│   └── design_pressure/
+│
+├── feedback_data/                   # Extraction results
+│   ├── anchors_extraction_[id].json
+│   ├── glazing_extraction_[id].json
+│   └── ...
+│
+├── parameters_anchors.json          # Anchor parameters
+├── parameters_glazing.json          # Glazing parameters
+├── parameters_impact_rating.json    # Impact parameters
+├── parameters_design_pressure.json  # Pressure parameters
+│
+└── feedback_log_[characteristic].json # LLM feedback logs
+```
+
+## Window Characteristics
+
+### 1. Anchors
+
+Extracts anchor types and installation methods:
 
 - Directly Into Concrete
 - Directly Into Wood
 - Into Wood via 1By Buck
 - Into Concrete via 1By Buck
 - Into Concrete via 2By Buck
-- Self Drilling Screws Into Metal Structures
+- Self Drilling Screws Into Metal
 
-### 2. **Glazing Specifications** 🪟
+### 2. Glazing
+
+Extracts glass specifications:
 
 - Glass type and thickness
-- Low-E coatings and performance
-- Insulated glass configurations
-- Laminated vs tempered specifications
+- Low-E coatings
+- IGU configurations
+- Laminated/tempered specifications
 
-### 3. **Impact Rating** 🌪️
+### 3. Impact Rating
+
+Extracts impact resistance data:
 
 - Small Missile Impact
 - Large Missile Impact
 - Both Missile Impact
-- Hurricane/storm compliance
+- Hurricane compliance
 
-### 4. **Design Pressure** 📊
+### 4. Design Pressure
 
-- Design pressure tables and ratings
-- Positive/negative pressure specifications
-- Wind load ratings (PSF, PA, KPA)
+Extracts pressure specifications:
+
+- Design pressure tables
+- Wind load ratings
 - Structural performance data
 
-## 🏗️ Architecture
+## How It Works
 
-### Base Code Structure
+1. **Page Filtering**: Skips first 3 pages (logos, covers, etc.)
+2. **Text Summarization**: Finds and summarizes relevant text content
+3. **Image Extraction**: Extracts images using context + reference matching
+4. **Table Extraction**: Finds tables with characteristic-specific data
+5. **LLM Feedback**: Azure OpenAI evaluates results and improves parameters
 
-All characteristics share the same extraction engine but with specialized:
+## Parameters
 
-- **Keyword dictionaries** for each characteristic
-- **Computer vision analysis** tuned for specific features
-- **LLM prompts** focused on characteristic-specific evaluation
-- **Parameter files** optimized for each extraction type
-
-### Characteristic-Specific Components
-
-- `adaptive_agent.py` - Main extraction engine with characteristic focus
-- `llm_feedback.py` - Specialized LLM analysis for each characteristic
-- `parameters_[characteristic].json` - Tuned parameters per characteristic
-- `feedback_log_[characteristic].json` - Characteristic-specific feedback history
-
-## 🚀 Quick Start
-
-### 1. Installation
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Azure OpenAI Setup
-
-```bash
-cp .env.example .env
-# Edit .env with your Azure OpenAI credentials
-```
-
-### 3. Test Connection
-
-```bash
-python llm_feedback.py --test-connection
-```
-
-## 🎯 Characteristic-Specific Commands
-
-### Extract Anchor Information
-
-```bash
-python adaptive_agent.py --source document.pdf --characteristic anchors
-```
-
-**Focus**: Extracts anchor types, fastener specifications, installation methods
-
-### Extract Glazing Specifications
-
-```bash
-python adaptive_agent.py --source document.pdf --characteristic glazing
-```
-
-**Focus**: Extracts glass types, thicknesses, coatings, IGU specifications
-
-### Extract Impact Ratings
-
-```bash
-python adaptive_agent.py --source document.pdf --characteristic impact_rating
-```
-
-**Focus**: Extracts missile impact ratings, hurricane compliance, test results
-
-### Extract Design Pressure Data
-
-```bash
-python adaptive_agent.py --source document.pdf --characteristic design_pressure
-```
-
-**Focus**: Extracts pressure tables, DP ratings, wind load specifications
-
-## 📋 Command Options
-
-### Basic Usage
-
-```bash
-python adaptive_agent.py --source [PDF_PATH] --characteristic [TYPE]
-```
-
-### Advanced Options
-
-```bash
-# Debug mode for detailed output
-python adaptive_agent.py --source document.pdf --characteristic anchors --debug
-
-# Test current parameters
-python adaptive_agent.py --characteristic glazing --test-params --source dummy.pdf
-```
-
-### LLM Feedback Commands
-
-```bash
-# Manual LLM analysis
-python llm_feedback.py --analyze-characteristic anchors [DOC_ID]
-
-# View characteristic-specific logs
-python llm_feedback.py --show-log --characteristic glazing
-
-# View all feedback logs
-python llm_feedback.py --show-log
-```
-
-## 📊 Viewing Results
-
-```bash
-# Launch web interface to view all extractions
-streamlit run feedback_interface.py
-```
-
-## 🔧 Parameter Tuning
-
-Each characteristic maintains its own parameter file:
-
-- `parameters_anchors.json` - Anchor extraction parameters
-- `parameters_glazing.json` - Glazing extraction parameters
-- `parameters_impact_rating.json` - Impact rating parameters
-- `parameters_design_pressure.json` - Design pressure parameters
-
-### Key Parameters
+Each characteristic has its own parameter file:
 
 ```json
 {
-  "confidence_threshold": 0.4, // AI confidence required
-  "content_classification_threshold": 0.3, // Content relevance threshold
-  "image_size_min": 150, // Minimum image size (pixels)
-  "table_relevance_threshold": 2, // Keywords needed for table extraction
-  "max_extractions": 20 // Maximum items per document
-}
-```
-
-## 🤖 LLM Feedback System
-
-### Automatic Analysis
-
-The LLM analyzer evaluates:
-
-1. **Accuracy**: How well were characteristic items identified?
-2. **Completeness**: Was all relevant information captured?
-3. **Relevance**: Are extracted items actually characteristic-related?
-
-### Characteristic-Specific Prompts
-
-Each characteristic uses specialized prompts that understand:
-
-- Industry-specific terminology
-- Expected data formats
-- Quality benchmarks
-- Common extraction challenges
-
-## 📈 Workflow Examples
-
-### Complete Anchor Analysis
-
-```bash
-# 1. Extract anchor information
-python adaptive_agent.py --source window_spec.pdf --characteristic anchors
-
-# 2. View results
-streamlit run feedback_interface.py
-
-# 3. Check LLM feedback
-python llm_feedback.py --show-log --characteristic anchors
-
-# Output:
-# ✅ Found: Directly Into Concrete anchors
-# ✅ Found: #10 x 3" concrete screws
-# ✅ Found: Installation spacing requirements
-# ⚠️  Missed: 2By buck installation details
-```
-
-### Complete Glazing Analysis
-
-```bash
-# Extract glazing specifications
-python adaptive_agent.py --source glazing_doc.pdf --characteristic glazing --debug
-
-# Output:
-# ✅ Found: Low-E coating specifications
-# ✅ Found: 6mm + 12mm + 6mm IGU configuration
-# ✅ Found: Thermal performance data
-# ✅ Found: Laminated safety glass requirements
-```
-
-### Batch Processing Multiple Characteristics
-
-```bash
-# Process same document for all characteristics
-python adaptive_agent.py --source comprehensive_spec.pdf --characteristic anchors
-python adaptive_agent.py --source comprehensive_spec.pdf --characteristic glazing
-python adaptive_agent.py --source comprehensive_spec.pdf --characteristic impact_rating
-python adaptive_agent.py --source comprehensive_spec.pdf --characteristic design_pressure
-```
-
-## 📁 File Structure
-
-```
-window-characteristics-agent/
-├── adaptive_agent.py              # Main extraction engine
-├── llm_feedback.py               # Characteristic-specific LLM analyzer
-├── feedback_interface.py          # Streamlit viewer (unchanged)
-├── requirements.txt              # Dependencies
-├── .env                          # Azure OpenAI credentials
-├── .env.example                  # Template
-│
-├── parameters_anchors.json        # Anchor extraction parameters
-├── parameters_glazing.json        # Glazing extraction parameters
-├── parameters_impact_rating.json  # Impact rating parameters
-├── parameters_design_pressure.json # Design pressure parameters
-│
-├── feedback_log_anchors.json      # Anchor feedback history
-├── feedback_log_glazing.json      # Glazing feedback history
-├── feedback_log_impact_rating.json # Impact rating feedback history
-├── feedback_log_design_pressure.json # Design pressure feedback history
-│
-├── feedback_data/                 # Extraction results
-│   ├── anchors_extraction_[id].json
-│   ├── glazing_extraction_[id].json
-│   ├── impact_rating_extraction_[id].json
-│   └── design_pressure_extraction_[id].json
-│
-└── data/
-    └── input_pdfs/               # Source documents
-```
-
-## 🔍 Characteristic-Specific Features
-
-### Anchors 🔩
-
-- **Computer Vision**: Detects circular/hex shapes (screws, bolts)
-- **Keywords**: anchor, fastener, concrete screw, buck installation
-- **Tables**: Fastener schedules, installation specifications
-- **Analysis**: Anchor type coverage, installation method completeness
-
-### Glazing 🪟
-
-- **Computer Vision**: Detects parallel lines (glass layers)
-- **Keywords**: glazing, IGU, low-e, laminated, thickness
-- **Tables**: Glass specifications, thermal properties
-- **Analysis**: Glass type coverage, performance data completeness
-
-### Impact Rating 🌪️
-
-- **Computer Vision**: Detects test result tables
-- **Keywords**: missile impact, hurricane, ASTM, compliance
-- **Tables**: Test results, certification data
-- **Analysis**: Impact type coverage, compliance verification
-
-### Design Pressure 📊
-
-- **Computer Vision**: Detects tabular structures
-- **Keywords**: design pressure, DP, wind load, PSF
-- **Tables**: Pressure ratings, load specifications
-- **Analysis**: Pressure range coverage, rating completeness
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-**"No extractions found"**
-
-```bash
-# Check if document contains the characteristic
-python adaptive_agent.py --source doc.pdf --characteristic anchors --debug
-
-# Lower thresholds if needed
-# Edit parameters_anchors.json:
-{
   "confidence_threshold": 0.25,
-  "content_classification_threshold": 0.2
+  "min_section_length": 100,
+  "max_extractions": 15,
+  "image_size_min": 100,
+  "skip_pages": 3,
+  "content_classification_threshold": 0.15
 }
 ```
 
-**"LLM feedback failed"**
+These are automatically optimized by LLM feedback.
+
+## Reference Data
+
+Adding reference images dramatically improves accuracy:
+
+1. **Anchors**: Add photos of anchor installations, connection details
+2. **Glazing**: Add glass section drawings, IGU details
+3. **Impact Rating**: Add test certificates, rating tables
+4. **Design Pressure**: Add DP tables, load charts
+
+Use descriptive filenames like `concrete_anchor_detail.jpg`.
+
+## Troubleshooting
+
+### "Docling not available"
 
 ```bash
-# Test connection
-python llm_feedback.py --test-connection
-
-# Check credentials
-cat .env
+pip install docling>=1.0.0
 ```
 
-**"Characteristic not recognized"**
+### "No relevant content found"
+
+- Add reference images to `labeled_data/{characteristic}/`
+- Lower thresholds in `parameters_{characteristic}.json`
+- Use `--debug` to see what's being analyzed
+
+### "LLM feedback failed"
+
+- Configure Azure OpenAI in `.env` file
+- System works without LLM but parameters won't auto-optimize
+
+### "Computer vision not available"
 
 ```bash
-# Valid characteristics:
-# anchors, glazing, impact_rating, design_pressure
-python adaptive_agent.py --source doc.pdf --characteristic glazing
+pip install opencv-python Pillow numpy
 ```
 
-## 💡 Best Practices
+## Dependencies
 
-### Document Quality
+```bash
+pip install docling python-dotenv streamlit requests
+pip install opencv-python Pillow numpy  # For reference matching
+pip install langchain-openai langchain-core  # For LLM feedback
+```
 
-- Use high-resolution PDFs for better image extraction
-- Ensure text is searchable (not scanned images only)
-- Multi-page documents work better than single images
+## Examples
 
-### Characteristic Selection
+### Extract Anchors
 
-- Use **anchors** for installation and fastener specifications
-- Use **glazing** for glass types and performance data
-- Use **impact_rating** for compliance and test results
-- Use **design_pressure** for structural and wind load data
+```bash
+python adaptive_agent.py --source specs.pdf --characteristic anchors
+```
 
-### Parameter Optimization
+Output:
 
-- Start with default parameters
-- Let LLM feedback adjust automatically
-- Manual tuning for specific document types
-- Monitor feedback logs for quality trends
+- Finds anchor-related text sections
+- Extracts images showing connection details
+- Extracts tables with fastener specifications
+- Matches against your reference anchor images
+- LLM optimizes parameters for better results
 
-## 📊 Success Metrics
+### View Results
 
-### Extraction Quality Indicators
+```bash
+streamlit run feedback_interface.py
+```
 
-- **High Accuracy** (4-5/5): Correct characteristic identification
-- **High Completeness** (4-5/5): All relevant data captured
-- **High Relevance** (4-5/5): No false positives
-
-### Coverage Benchmarks
-
-- **Anchors**: 3+ anchor types identified = comprehensive
-- **Glazing**: 2+ glass specifications = comprehensive
-- **Impact Rating**: 1+ impact types = comprehensive
-- **Design Pressure**: 2+ pressure values = comprehensive
-
-## 🔄 Continuous Improvement
-
-The system automatically improves through:
-
-1. **LLM Feedback**: Analyzes each extraction for quality
-2. **Parameter Adjustment**: Optimizes thresholds based on results
-3. **Learning History**: Tracks improvements over time
-4. **Characteristic Focus**: Specialized analysis per window feature
+See extracted images, tables, and text organized by characteristic with confidence scores.
 
 ---
 
-**Ready to extract specific window characteristics with AI precision!** 🎯
+**System Requirements**: Python 3.8+, ~2GB RAM for document processing

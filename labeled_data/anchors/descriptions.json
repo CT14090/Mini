@@ -1,0 +1,7 @@
+{
+  "concrete_anchor": "Anchor bolts or screws going directly into concrete substrate",
+  "wood_anchor": "Screws or fasteners going directly into wood framing",
+  "buck_anchor": "Anchors going through wood buck into substrate",
+  "self_drilling": "Self-drilling screws for metal structures",
+  "structural_connection": "Connection details showing anchor placement and spacing"
+}
