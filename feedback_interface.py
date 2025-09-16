@@ -1,485 +1,608 @@
 #!/usr/bin/env python3
 """
-Specialized Window Characteristics Feedback Interface
-Views extraction results organized by characteristic type
+Complete Fixed Streamlit Interface for Window Characteristic Extractions
 """
 import streamlit as st
 import json
 import os
 import pathlib
+import base64
+import re
 from datetime import datetime
 from typing import Dict, List, Optional
-import base64
+import pandas as pd
 
-def load_characteristic_extractions() -> Dict[str, List[Dict]]:
-    """Load all characteristic extraction files"""
-    extractions = {
-        'anchors': [],
-        'glazing': [],
-        'impact_rating': [],
-        'design_pressure': []
-    }
+# Optional plotly import
+PLOTLY_AVAILABLE = False
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    pass
+
+# Page configuration
+st.set_page_config(
+    page_title="Window Characteristic Analysis",
+    page_icon="🪟",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+def clean_extracted_text(text: str) -> str:
+    """Clean up garbled extracted text"""
+    if not text:
+        return ""
     
+    # Remove GLYPH patterns
+    text = re.sub(r'GLYPH<[^>]*>', '', text)
+    
+    # Remove font references
+    text = re.sub(r'font=/[A-Z\-+]+', '', text)
+    
+    # Remove excessive whitespace
+    text = re.sub(r'\s+', ' ', text)
+    
+    # Remove control characters
+    text = re.sub(r'[^\x20-\x7E]', ' ', text)
+    
+    # Clean up common OCR errors
+    text = text.replace('GLYPH', ' ')
+    text = text.replace('DVGLYPH', ' ')
+    
+    # Remove patterns like "c=3," or "c=17,"
+    text = re.sub(r'c=\d+,', '', text)
+    
+    return text.strip()
+
+def clean_table_content(content: str) -> str:
+    """Clean up table content for better display"""
+    if not content:
+        return ""
+    
+    # Basic cleaning
+    content = clean_extracted_text(content)
+    
+    # Preserve table structure but clean up
+    lines = content.split('\n')
+    cleaned_lines = []
+    
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith('|--'):  # Keep content, remove separator lines
+            cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
+def load_extraction_files() -> Dict[str, List[Dict]]:
+    """Load all extraction files organized by characteristic"""
+    extraction_files = {}
     feedback_dir = pathlib.Path("feedback_data")
+    
     if not feedback_dir.exists():
-        return extractions
+        return extraction_files
     
-    # Load all extraction files
-    for file_path in feedback_dir.glob("*.json"):
-        try:
-            with open(file_path) as f:
-                data = json.load(f)
-            
-            # Determine characteristic from filename or data
-            characteristic = None
-            filename = file_path.stem
-            
-            if filename.startswith('anchors_'):
-                characteristic = 'anchors'
-            elif filename.startswith('glazing_'):
-                characteristic = 'glazing'  
-            elif filename.startswith('impact_rating_'):
-                characteristic = 'impact_rating'
-            elif filename.startswith('design_pressure_'):
-                characteristic = 'design_pressure'
-            elif 'characteristic_focus' in data:
-                characteristic = data['characteristic_focus']
-            
-            if characteristic and characteristic in extractions:
-                extractions[characteristic].append(data)
-                
-        except Exception as e:
-            st.error(f"Error loading {file_path}: {e}")
+    characteristics = ['anchors', 'glazing', 'impact_rating', 'design_pressure']
     
-    # Sort by timestamp (newest first)
-    for char_type in extractions:
-        extractions[char_type].sort(
-            key=lambda x: x.get('timestamp', ''), 
-            reverse=True
-        )
+    for characteristic in characteristics:
+        char_files = []
+        pattern = f"{characteristic}_extraction_*.json"
+        
+        for file_path in feedback_dir.glob(pattern):
+            try:
+                with open(file_path) as f:
+                    data = json.load(f)
+                    data['file_path'] = str(file_path)
+                    data['file_name'] = file_path.name
+                    char_files.append(data)
+            except Exception as e:
+                st.error(f"Error loading {file_path.name}: {str(e)[:100]}")
+        
+        char_files.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+        extraction_files[characteristic] = char_files
     
-    return extractions
+    return extraction_files
 
 def load_feedback_logs() -> Dict[str, List[Dict]]:
-    """Load characteristic-specific feedback logs"""
-    logs = {
-        'anchors': [],
-        'glazing': [],
-        'impact_rating': [],
-        'design_pressure': []
-    }
+    """Load feedback logs for each characteristic"""
+    feedback_logs = {}
+    characteristics = ['anchors', 'glazing', 'impact_rating', 'design_pressure']
     
-    for characteristic in logs.keys():
+    for characteristic in characteristics:
         log_file = f"feedback_log_{characteristic}.json"
         if os.path.exists(log_file):
             try:
                 with open(log_file) as f:
-                    logs[characteristic] = json.load(f)
-            except Exception as e:
-                st.error(f"Error loading {log_file}: {e}")
+                    feedback_logs[characteristic] = json.load(f)
+            except Exception:
+                feedback_logs[characteristic] = []
+        else:
+            feedback_logs[characteristic] = []
     
-    return logs
+    return feedback_logs
 
-def display_characteristic_overview(extractions: Dict[str, List[Dict]]):
-    """Display overview of all characteristics"""
-    st.header("🎯 Window Characteristics Overview")
+def check_azure_openai_status() -> bool:
+    """Check if Azure OpenAI is configured properly"""
+    try:
+        # Force reload environment variables
+        from dotenv import load_dotenv
+        load_dotenv(override=True)
+    except:
+        pass
     
-    # Summary metrics
-    total_docs = sum(len(docs) for docs in extractions.values())
+    required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
     
-    if total_docs == 0:
-        st.warning("📭 No extractions found. Run some characteristic extractions first!")
-        st.code("""
-# Example commands:
-python adaptive_agent.py --source document.pdf --characteristic anchors
-python adaptive_agent.py --source document.pdf --characteristic glazing
-python adaptive_agent.py --source document.pdf --characteristic impact_rating
-python adaptive_agent.py --source document.pdf --characteristic design_pressure
-        """)
-        return
+    # Check if all variables exist and are not empty
+    for var in required_vars:
+        value = os.getenv(var)
+        if not value or len(str(value).strip()) == 0:
+            return False
     
-    # Characteristic cards
-    cols = st.columns(4)
-    
-    characteristics_info = {
-        'anchors': {'icon': '🔩', 'name': 'Anchor Types', 'color': '#FF6B6B'},
-        'glazing': {'icon': '🪟', 'name': 'Glazing Specs', 'color': '#4ECDC4'},
-        'impact_rating': {'icon': '🌪️', 'name': 'Impact Rating', 'color': '#45B7D1'},
-        'design_pressure': {'icon': '📊', 'name': 'Design Pressure', 'color': '#96CEB4'}
-    }
-    
-    for i, (char_type, info) in enumerate(characteristics_info.items()):
-        with cols[i]:
-            doc_count = len(extractions[char_type])
-            total_items = sum(len(doc.get('extracted_sections', [])) for doc in extractions[char_type])
-            
-            st.markdown(f"""
-            <div style="
-                background: linear-gradient(135deg, {info['color']}22, {info['color']}11);
-                border: 1px solid {info['color']}44;
-                border-radius: 10px;
-                padding: 20px;
-                text-align: center;
-                margin-bottom: 10px;
-            ">
-                <div style="font-size: 2rem; margin-bottom: 10px;">{info['icon']}</div>
-                <div style="font-weight: bold; color: {info['color']}; margin-bottom: 5px;">
-                    {info['name']}
-                </div>
-                <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 5px;">
-                    {doc_count} Documents
-                </div>
-                <div style="color: #666; font-size: 0.9rem;">
-                    {total_items} Items Extracted
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Recent activity
-    st.subheader("📅 Recent Extractions")
-    
-    # Combine all recent extractions
-    all_recent = []
-    for char_type, docs in extractions.items():
-        for doc in docs[:3]:  # Top 3 per characteristic
-            doc['characteristic_type'] = char_type
-            all_recent.append(doc)
-    
-    # Sort by timestamp
-    all_recent.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-    
-    for doc in all_recent[:8]:  # Show top 8 recent
-        char_type = doc['characteristic_type']
-        info = characteristics_info[char_type]
+    # Try to import and test connection
+    try:
+        from langchain_openai import AzureChatOpenAI
+        from langchain_core.messages import HumanMessage
         
-        timestamp = datetime.fromisoformat(doc.get('timestamp', '')).strftime('%Y-%m-%d %H:%M')
-        doc_name = os.path.basename(doc.get('document_path', 'Unknown'))
-        item_count = len(doc.get('extracted_sections', []))
+        llm = AzureChatOpenAI(
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            api_version="2024-02-01",
+            temperature=0.1,
+            max_tokens=5
+        )
         
-        with st.expander(f"{info['icon']} {info['name']} - {doc_name} ({timestamp})"):
-            col1, col2, col3 = st.columns([2, 1, 1])
-            
-            with col1:
-                st.write(f"**Document**: {doc_name}")
-                st.write(f"**Focus**: {char_type.replace('_', ' ').title()}")
-            
-            with col2:
-                st.metric("Items Extracted", item_count)
-            
-            with col3:
-                processing_time = doc.get('processing_time', 0)
-                st.metric("Processing Time", f"{processing_time:.1f}s")
+        # Quick test (don't actually call it in Streamlit to avoid costs)
+        return True
+        
+    except Exception:
+        return False
 
-def display_characteristic_details(char_type: str, extractions: List[Dict], logs: List[Dict]):
-    """Display detailed view of specific characteristic"""
-    info_map = {
-        'anchors': {'icon': '🔩', 'name': 'Anchor Types', 'color': '#FF6B6B'},
-        'glazing': {'icon': '🪟', 'name': 'Glazing Specifications', 'color': '#4ECDC4'},
-        'impact_rating': {'icon': '🌪️', 'name': 'Impact Rating', 'color': '#45B7D1'},
-        'design_pressure': {'icon': '📊', 'name': 'Design Pressure', 'color': '#96CEB4'}
-    }
+def display_image_from_data_uri(data_uri: str, caption: str = "", width: int = 300):
+    """Display image from data URI"""
+    try:
+        if data_uri and data_uri.startswith('data:image'):
+            base64_data = data_uri.split(',')[1]
+            image_bytes = base64.b64decode(base64_data)
+            st.image(image_bytes, caption=caption, width=width)
+        else:
+            st.write("No image data available")
+    except Exception as e:
+        st.error(f"Error displaying image: {str(e)[:50]}")
+
+def display_all_images(items: List[Dict]):
+    """Display all extracted images"""
+    cols = st.columns(3)  # 3 images per row
     
-    info = info_map[char_type]
+    for i, item in enumerate(items):
+        with cols[i % 3]:
+            st.write(f"**Image {i+1}** - Page {item.get('page', 'Unknown')}")
+            st.write(f"Confidence: {item.get('confidence', 0):.3f}")
+            
+            data_uri = item.get('data_uri')
+            if data_uri:
+                display_image_from_data_uri(data_uri, width=200)
+            
+            # Show metadata
+            metadata = item.get('metadata', {})
+            if metadata.get('reference_name'):
+                st.write(f"Reference: {metadata.get('reference_name')}")
+            if metadata.get('extraction_method'):
+                st.write(f"Method: {metadata.get('extraction_method')}")
+            
+            st.write("---")
+
+def display_all_summaries(items: List[Dict]):
+    """Display all text summaries"""
+    for i, item in enumerate(items, 1):
+        with st.expander(f"Summary {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
+            content = item.get('content', '')
+            if content:
+                # Clean up garbled text
+                cleaned_content = clean_extracted_text(content)
+                if cleaned_content and len(cleaned_content.strip()) > 50:
+                    st.write(cleaned_content)
+                else:
+                    st.warning("Text summary appears to be corrupted or too short")
+                    st.text(content[:200] + "..." if len(content) > 200 else content)
+            
+            # Show metadata
+            metadata = item.get('metadata', {})
+            if metadata:
+                st.write("**Extraction Details:**")
+                st.write(f"- Keyword matches: {metadata.get('keyword_matches', 0)}")
+                st.write(f"- Source pages: {metadata.get('source_pages', [])}")
+                st.write(f"- Extraction method: {metadata.get('extraction_method', 'Unknown')}")
+
+def display_all_tables(items: List[Dict]):
+    """Display all extracted tables"""
+    for i, item in enumerate(items, 1):
+        with st.expander(f"Table {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
+            content = item.get('content', '')
+            if content:
+                # Clean table content
+                cleaned_content = clean_table_content(content)
+                st.text(cleaned_content)
+            
+            # Show metadata
+            metadata = item.get('metadata', {})
+            if metadata:
+                st.write("**Table Analysis:**")
+                st.write(f"- Relevance score: {metadata.get('relevance_score', 0):.1f}")
+                
+                table_analysis = metadata.get('table_analysis', {})
+                if table_analysis:
+                    data_points = table_analysis.get('data_points_found', [])
+                    if data_points:
+                        st.write(f"- Data points found: {', '.join(data_points)}")
+                    st.write(f"- Table type: {table_analysis.get('table_type', 'Unknown')}")
+
+def display_all_other_content(items: List[Dict]):
+    """Display other content types"""
+    for i, item in enumerate(items, 1):
+        with st.expander(f"Item {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
+            content = item.get('content', '')
+            if content:
+                cleaned_content = clean_extracted_text(content)
+                if cleaned_content:
+                    st.write(cleaned_content)
+                else:
+                    st.text(content)
+            
+            metadata = item.get('metadata', {})
+            if metadata:
+                st.write("**Metadata:**")
+                for key, value in metadata.items():
+                    if isinstance(value, (str, int, float)) and key != 'bbox':
+                        st.write(f"- {key}: {value}")
+
+def display_content_breakdown(sections: List[Dict]):
+    """Display all extracted content organized by type"""
+    # Group by type
+    content_types = {}
+    for section in sections:
+        section_type = section.get('type', 'unknown')
+        clean_type = section_type.replace('_', ' ').title()
+        if clean_type not in content_types:
+            content_types[clean_type] = []
+        content_types[clean_type].append(section)
     
-    st.header(f"{info['icon']} {info['name']} Extractions")
-    
-    if not extractions:
-        st.warning(f"No {char_type} extractions found.")
-        st.code(f"python adaptive_agent.py --source document.pdf --characteristic {char_type}")
-        return
-    
-    # Summary stats
-    total_items = sum(len(doc.get('extracted_sections', [])) for doc in extractions)
-    avg_confidence = 0
-    confidence_count = 0
-    
-    for doc in extractions:
-        for section in doc.get('extracted_sections', []):
-            if 'confidence' in section:
-                avg_confidence += section['confidence']
-                confidence_count += 1
-    
-    if confidence_count > 0:
-        avg_confidence /= confidence_count
-    
+    # Show all content types
+    for content_type, items in content_types.items():
+        st.write(f"### {content_type} ({len(items)} items)")
+        
+        if 'image' in content_type.lower():
+            display_all_images(items)
+        elif 'summary' in content_type.lower():
+            display_all_summaries(items)
+        elif 'table' in content_type.lower():
+            display_all_tables(items)
+        else:
+            display_all_other_content(items)
+        
+        st.write("---")
+
+def display_extraction_summary(extraction_files: Dict[str, List[Dict]]):
+    """Display extraction summary statistics"""
     col1, col2, col3, col4 = st.columns(4)
+    
+    total_docs = sum(len(files) for files in extraction_files.values())
+    total_items = 0
+    avg_confidence = 0
+    
+    for char_files in extraction_files.values():
+        for file_data in char_files:
+            sections = file_data.get('extracted_sections', [])
+            total_items += len(sections)
+            if sections:
+                avg_confidence += sum(item.get('confidence', 0) for item in sections) / len(sections)
+    
+    if total_docs > 0:
+        avg_confidence /= total_docs
+    
     with col1:
-        st.metric("Documents", len(extractions))
+        st.metric("Total Documents", total_docs)
     with col2:
         st.metric("Total Items", total_items)
     with col3:
         st.metric("Avg Confidence", f"{avg_confidence:.2f}")
     with col4:
-        recent_feedback = len([log for log in logs if 
-                              (datetime.now() - datetime.fromisoformat(log.get('timestamp', datetime.now().isoformat()))).days < 7])
-        st.metric("Recent Feedback", recent_feedback)
+        azure_status = "Connected" if check_azure_openai_status() else "Missing"
+        st.metric("Azure OpenAI", azure_status)
+
+def display_recent_extractions(extraction_files: Dict[str, List[Dict]]):
+    """Display recent extractions in a clean table"""
+    recent_data = []
+    for characteristic, files in extraction_files.items():
+        for file_data in files[:2]:  # Top 2 per characteristic
+            recent_data.append({
+                'Characteristic': characteristic.replace('_', ' ').title(),
+                'Document': file_data.get('document_id', 'Unknown')[:8],
+                'Items': file_data.get('total_sections', 0),
+                'Date': file_data.get('timestamp', '')[:10],
+                'Time': f"{file_data.get('processing_time', 0):.1f}s"
+            })
+    
+    if recent_data:
+        df = pd.DataFrame(recent_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No extractions found. Process some documents to get started.")
+
+def display_characteristic_page(characteristic: str, extraction_files: List[Dict], feedback_logs: List[Dict]):
+    """Display characteristic-specific page"""
+    char_title = characteristic.replace('_', ' ').title()
+    st.header(f"{char_title} Analysis")
+    
+    if not extraction_files:
+        st.info(f"No {char_title.lower()} extractions found.")
+        st.code(f"python adaptive_agent.py --source document.pdf --characteristics {characteristic}")
+        return
     
     # Document selector
-    st.subheader("📄 Select Document")
     doc_options = []
-    for i, doc in enumerate(extractions):
-        doc_name = os.path.basename(doc.get('document_path', f'Document {i+1}'))
-        timestamp = datetime.fromisoformat(doc.get('timestamp', '')).strftime('%Y-%m-%d %H:%M')
-        item_count = len(doc.get('extracted_sections', []))
-        doc_options.append(f"{doc_name} | {timestamp} | {item_count} items")
+    for i, f in enumerate(extraction_files):
+        doc_id = f.get('document_id', 'Unknown')[:8]
+        path = os.path.basename(f.get('document_path', 'Unknown'))
+        timestamp = f.get('timestamp', '')[:10]
+        doc_options.append(f"{doc_id} - {path} ({timestamp})")
     
-    selected_idx = st.selectbox("Choose document:", range(len(doc_options)), 
-                               format_func=lambda x: doc_options[x])
-    
-    if selected_idx is not None:
-        selected_doc = extractions[selected_idx]
-        display_document_extractions(selected_doc, char_type, info)
-    
-    # Feedback analysis
-    if logs:
-        st.subheader("🤖 LLM Feedback Analysis")
-        display_feedback_analysis(logs, char_type)
-
-def display_document_extractions(doc: Dict, char_type: str, info: Dict):
-    """Display extractions from a specific document"""
-    sections = doc.get('extracted_sections', [])
-    
-    if not sections:
-        st.warning("No extractions found in this document.")
-        return
-    
-    st.subheader(f"📋 Extracted {info['name']}")
-    
-    # Filter and group by type
-    images = [s for s in sections if 'image' in s.get('type', '')]
-    tables = [s for s in sections if 'table' in s.get('type', '')]
-    text_sections = [s for s in sections if 'text' in s.get('type', '')]
-    
-    # Display images
-    if images:
-        st.markdown(f"### 🖼️ {info['name']} Images ({len(images)})")
-        
-        # Image grid
-        cols_per_row = 2
-        for i in range(0, len(images), cols_per_row):
-            cols = st.columns(cols_per_row)
-            for j in range(cols_per_row):
-                idx = i + j
-                if idx < len(images):
-                    with cols[j]:
-                        img_section = images[idx]
-                        display_image_section(img_section, char_type)
-    
-    # Display tables
-    if tables:
-        st.markdown(f"### 📊 {info['name']} Tables ({len(tables)})")
-        for table_section in tables:
-            display_table_section(table_section, char_type)
-    
-    # Display text
-    if text_sections:
-        st.markdown(f"### 📝 {info['name']} Text ({len(text_sections)})")
-        for text_section in text_sections:
-            display_text_section(text_section, char_type)
-
-def display_image_section(section: Dict, char_type: str):
-    """Display an image section with metadata"""
-    confidence = section.get('confidence', 0)
-    page = section.get('page', 'Unknown')
-    
-    # Confidence color
-    if confidence >= 0.7:
-        conf_color = "green"
-    elif confidence >= 0.5:
-        conf_color = "orange"
-    else:
-        conf_color = "red"
-    
-    st.markdown(f"""
-    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 15px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <strong>Page {page}</strong>
-            <span style="color: {conf_color}; font-weight: bold;">
-                Confidence: {confidence:.2f}
-            </span>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # Display image
-    data_uri = section.get('data_uri', '')
-    if data_uri:
-        st.image(data_uri, use_column_width=True)
-    
-    # Metadata
-    metadata = section.get('metadata', {})
-    if metadata:
-        st.caption(f"Size: {metadata.get('width', '?')}x{metadata.get('height', '?')}px")
-    
-    # CV Analysis
-    cv_analysis = section.get('cv_analysis', {})
-    if cv_analysis.get('features_detected'):
-        st.caption(f"CV Features: {', '.join(cv_analysis['features_detected'])}")
-    
-    st.markdown("</div>", unsafe_allow_html=True)
-
-def display_table_section(section: Dict, char_type: str):
-    """Display a table section with analysis"""
-    confidence = section.get('confidence', 0)
-    page = section.get('page', 'Unknown')
-    
-    with st.expander(f"Table from Page {page} (Confidence: {confidence:.2f})", expanded=True):
-        # Table content
-        content = section.get('content', '')
-        if content:
-            st.markdown(content)
-        
-        # Table analysis
-        table_analysis = section.get('table_analysis', {})
-        if table_analysis:
-            data_points = table_analysis.get('data_points_found', [])
-            char_data = table_analysis.get('characteristic_specific_data', {})
-            
-            if data_points:
-                st.caption(f"**Found**: {', '.join(data_points)}")
-            
-            if char_data:
-                for key, value in char_data.items():
-                    st.caption(f"**{key.replace('_', ' ').title()}**: {', '.join(map(str, value[:5]))}")
-
-def display_text_section(section: Dict, char_type: str):
-    """Display a text section with mentions"""
-    confidence = section.get('confidence', 0)
-    page = section.get('page', 'Unknown')
-    
-    with st.expander(f"Text from Page {page} (Confidence: {confidence:.2f})"):
-        content = section.get('content', '')
-        if content:
-            st.text_area("Content", content, height=150, disabled=True)
-        
-        # Characteristic mentions
-        mentions = section.get('characteristic_mentions', [])
-        if mentions:
-            st.caption("**Key Mentions:**")
-            for mention in mentions[:3]:
-                st.caption(f"• {mention}")
-
-def display_feedback_analysis(logs: List[Dict], char_type: str):
-    """Display feedback analysis for characteristic"""
-    if not logs:
-        st.info(f"No feedback logs found for {char_type}")
-        return
-    
-    # Recent feedback summary
-    recent_logs = logs[-5:]  # Last 5 feedback entries
-    
-    # Quality trends
-    qualities = []
-    timestamps = []
-    
-    for log in recent_logs:
-        quality_scores = log.get('quality_scores', {})
-        avg_quality = quality_scores.get('average', 0)
-        if avg_quality > 0:
-            qualities.append(avg_quality)
-            timestamps.append(datetime.fromisoformat(log.get('timestamp', '')))
-    
-    if qualities:
-        st.line_chart(dict(zip(timestamps, qualities)))
-    
-    # Latest feedback details
-    if recent_logs:
-        latest_log = recent_logs[-1]
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("#### 📊 Latest Quality Scores")
-            quality_scores = latest_log.get('quality_scores', {})
-            
-            for metric, score in quality_scores.items():
-                if metric != 'average':
-                    st.metric(metric.title(), f"{score}/5")
-        
-        with col2:
-            st.markdown("#### 🔧 Recent Parameter Changes")
-            changes = latest_log.get('parameter_changes', [])
-            
-            if changes:
-                for change in changes[-3:]:  # Show last 3 changes
-                    st.caption(f"• {change}")
-            else:
-                st.caption("No recent parameter changes")
-        
-        # LLM reasoning
-        reasoning = latest_log.get('llm_reasoning', '')
-        if reasoning:
-            st.markdown("#### 💡 LLM Reasoning")
-            st.info(reasoning)
-
-def main():
-    st.set_page_config(
-        page_title="Window Characteristics Analyzer", 
-        page_icon="🎯",
-        layout="wide"
+    selected_idx = st.selectbox(
+        f"Select {char_title} Document:",
+        range(len(doc_options)),
+        format_func=lambda x: doc_options[x],
+        key=f"doc_selector_{characteristic}"
     )
     
-    st.title("🎯 Window Characteristics Extraction Analyzer")
-    st.markdown("*AI-powered extraction and analysis of specific window characteristics*")
+    if selected_idx is not None:
+        selected_doc = extraction_files[selected_idx]
+        display_document_analysis(characteristic, selected_doc, feedback_logs)
+
+def display_document_analysis(characteristic: str, doc_data: Dict, feedback_logs: List[Dict]):
+    """Display comprehensive document analysis"""
+    doc_id = doc_data.get('document_id', 'Unknown')
+    
+    # Find feedback for this document
+    doc_feedback = next((log for log in feedback_logs if log.get('document_id') == doc_id), None)
+    
+    # Document overview
+    st.subheader("Document Overview")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write(f"**ID:** {doc_id}")
+        st.write(f"**Source:** {os.path.basename(doc_data.get('document_path', 'Unknown'))}")
+        st.write(f"**Pages:** {doc_data.get('total_pages', 'Unknown')}")
+    
+    with col2:
+        timestamp = doc_data.get('timestamp', '')
+        if timestamp:
+            formatted_time = datetime.fromisoformat(timestamp).strftime('%Y-%m-%d %H:%M')
+            st.write(f"**Processed:** {formatted_time}")
+        
+        st.write(f"**Items Extracted:** {doc_data.get('total_sections', 0)}")
+        processing_time = doc_data.get('processing_time', 0)
+        if processing_time:
+            st.write(f"**Processing Time:** {processing_time:.1f}s")
+    
+    # AI Feedback Analysis
+    if doc_feedback:
+        st.subheader("AI Analysis Results")
+        display_ai_feedback(doc_feedback)
+    
+    # Content breakdown
+    sections = doc_data.get('extracted_sections', [])
+    if sections:
+        st.subheader("Extracted Content")
+        display_content_breakdown(sections)
+    
+    # Text summary
+    text_summary = doc_data.get('text_summary', {})
+    if text_summary.get('summary'):
+        st.subheader("Text Summary")
+        
+        summary_text = text_summary['summary']
+        cleaned_summary = clean_extracted_text(summary_text)
+        
+        col1, col2 = st.columns([3, 1])
+        with col2:
+            st.metric("Confidence", f"{text_summary.get('confidence', 0):.2f}")
+            st.write(f"**Source Pages:** {text_summary.get('source_pages', [])}")
+            st.write(f"**Sentences:** {text_summary.get('sentence_count', 0)}")
+            
+            # Additional metadata
+            if 'total_sentences_analyzed' in text_summary:
+                st.write(f"**Total Analyzed:** {text_summary.get('total_sentences_analyzed', 0)}")
+            if 'relevant_sentences_found' in text_summary:
+                st.write(f"**Relevant Found:** {text_summary.get('relevant_sentences_found', 0)}")
+        
+        with col1:
+            if cleaned_summary and len(cleaned_summary.strip()) > 50:
+                # Split into sentences for better readability
+                sentences = cleaned_summary.split('. ')
+                for i, sentence in enumerate(sentences[:5], 1):  # Show first 5 sentences clearly
+                    if sentence.strip():
+                        st.write(f"**{i}.** {sentence.strip()}.")
+                
+                if len(sentences) > 5:
+                    with st.expander(f"Show remaining {len(sentences) - 5} sentences"):
+                        for i, sentence in enumerate(sentences[5:], 6):
+                            if sentence.strip():
+                                st.write(f"**{i}.** {sentence.strip()}.")
+            else:
+                st.warning("Text summary appears to contain extraction errors")
+                st.text(summary_text[:300] + "..." if len(summary_text) > 300 else summary_text)
+
+def display_ai_feedback(feedback: Dict):
+    """Display AI feedback in a clean format"""
+    quality_scores = feedback.get('quality_scores', {})
+    
+    if quality_scores:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Content Relevance", f"{quality_scores.get('content_relevance', 0)}/5")
+        with col2:
+            st.metric("Extraction Quality", f"{quality_scores.get('extraction_quality', 0)}/5")
+        with col3:
+            st.metric("Reference Alignment", f"{quality_scores.get('reference_alignment', 0)}/5")
+    
+    # Parameter changes
+    param_changes = feedback.get('parameter_changes', [])
+    if param_changes:
+        st.write("**Parameter Updates Applied:**")
+        for change in param_changes[:3]:  # Show top 3
+            st.write(f"• {change}")
+    
+    # AI reasoning (condensed)
+    reasoning = feedback.get('reasoning', '')
+    if reasoning and len(reasoning) > 0:
+        with st.expander("AI Analysis Details"):
+            st.write(reasoning[:300] + "..." if len(reasoning) > 300 else reasoning)
+
+def display_analytics_page(extraction_files: Dict[str, List[Dict]], feedback_logs: Dict[str, List[Dict]]):
+    """Display analytics and trends"""
+    st.header("Analytics Dashboard")
+    
+    # Performance summary
+    st.subheader("Performance Summary")
+    perf_data = []
+    for characteristic, files in extraction_files.items():
+        if files:
+            total_items = sum(len(f.get('extracted_sections', [])) for f in files)
+            total_docs = len(files)
+            avg_items = total_items / total_docs if total_docs > 0 else 0
+            
+            perf_data.append({
+                'Characteristic': characteristic.replace('_', ' ').title(),
+                'Documents': total_docs,
+                'Total Items': total_items,
+                'Avg Items/Doc': f"{avg_items:.1f}"
+            })
+    
+    if perf_data:
+        df = pd.DataFrame(perf_data)
+        st.dataframe(df, use_container_width=True, hide_index=True)
+        
+        if PLOTLY_AVAILABLE:
+            col1, col2 = st.columns(2)
+            with col1:
+                fig1 = px.bar(df, x='Characteristic', y='Total Items', 
+                             title='Items Extracted by Characteristic')
+                st.plotly_chart(fig1, use_container_width=True)
+            
+            with col2:
+                fig2 = px.pie(df, values='Documents', names='Characteristic',
+                             title='Documents by Characteristic')
+                st.plotly_chart(fig2, use_container_width=True)
+    
+    # Recent parameter changes
+    st.subheader("Recent Parameter Changes")
+    all_changes = []
+    for characteristic, logs in feedback_logs.items():
+        for log in logs[-3:]:  # Last 3 per characteristic
+            changes = log.get('parameter_changes', [])
+            for change in changes:
+                all_changes.append({
+                    'Characteristic': characteristic.replace('_', ' ').title(),
+                    'Date': log.get('timestamp', '')[:10],
+                    'Change': change
+                })
+    
+    if all_changes:
+        changes_df = pd.DataFrame(all_changes)
+        st.dataframe(changes_df.tail(8), use_container_width=True, hide_index=True)
+    else:
+        st.info("No parameter changes recorded yet.")
+
+def main():
+    """Main Streamlit application"""
+    st.title("Window Characteristic Analysis")
+    st.markdown("AI-powered document analysis for window construction specifications")
     
     # Load data
-    extractions = load_characteristic_extractions()
-    feedback_logs = load_feedback_logs()
+    try:
+        extraction_files = load_extraction_files()
+        feedback_logs = load_feedback_logs()
+    except Exception as e:
+        st.error(f"Error loading data: {str(e)[:100]}")
+        return
+    
+    # Check for data
+    total_files = sum(len(files) for files in extraction_files.values())
+    
+    if total_files == 0:
+        st.warning("No extraction data found!")
+        
+        st.subheader("Getting Started")
+        st.write("1. **Setup reference data:**")
+        st.code("python adaptive_agent.py --setup-reference-data")
+        
+        st.write("2. **Process a document:**")
+        st.code("python adaptive_agent.py --source document.pdf")
+        
+        st.write("3. **Test Azure OpenAI (optional):**")
+        st.code("python llm_feedback.py --test-connection")
+        
+        return
     
     # Sidebar navigation
-    st.sidebar.title("🏗️ Navigation")
+    st.sidebar.title("Navigation")
     
-    view_options = ["Overview", "Anchors 🔩", "Glazing 🪟", "Impact Rating 🌪️", "Design Pressure 📊"]
-    selected_view = st.sidebar.selectbox("Select View:", view_options)
+    page_options = ["Overview", "Anchors", "Glazing", "Impact Rating", "Design Pressure", "Analytics"]
+    selected_page = st.sidebar.selectbox(
+        "Select Page:",
+        page_options,
+        key="main_page_selector"
+    )
     
-    # System status
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("#### 📊 System Status")
+    # System status in sidebar
+    st.sidebar.subheader("System Status")
+    azure_connected = check_azure_openai_status()
+    st.sidebar.write(f"Azure OpenAI: {'✅' if azure_connected else '❌'}")
+    st.sidebar.write(f"Documents: {total_files}")
     
-    total_docs = sum(len(docs) for docs in extractions.values())
     total_feedback = sum(len(logs) for logs in feedback_logs.values())
+    st.sidebar.write(f"AI Feedback: {total_feedback}")
     
-    st.sidebar.metric("Total Documents", total_docs)
-    st.sidebar.metric("Feedback Entries", total_feedback)
-    
-    # Azure status
-    azure_configured = all([
-        os.getenv('AZURE_OPENAI_ENDPOINT'),
-        os.getenv('AZURE_OPENAI_API_KEY'),
-        os.getenv('AZURE_OPENAI_DEPLOYMENT')
-    ])
-    
-    status_color = "🟢" if azure_configured else "🔴"
-    st.sidebar.markdown(f"{status_color} Azure OpenAI: {'Configured' if azure_configured else 'Missing'}")
+    # Reference data status
+    labeled_data_path = pathlib.Path("labeled_data")
+    if labeled_data_path.exists():
+        st.sidebar.subheader("Reference Data")
+        for char in ['anchors', 'glazing', 'impact_rating', 'design_pressure']:
+            char_path = labeled_data_path / char
+            if char_path.exists():
+                image_count = 0
+                for ext in ['*.jpg', '*.jpeg', '*.png']:
+                    image_count += len(list(char_path.glob(ext)))
+                st.sidebar.write(f"{char}: {image_count} images")
     
     # Main content
-    if selected_view == "Overview":
-        display_characteristic_overview(extractions)
+    if selected_page == "Overview":
+        st.header("System Overview")
+        display_extraction_summary(extraction_files)
+        
+        st.subheader("Recent Extractions")
+        display_recent_extractions(extraction_files)
     
-    elif selected_view == "Anchors 🔩":
-        display_characteristic_details('anchors', extractions['anchors'], feedback_logs['anchors'])
+    elif selected_page == "Anchors":
+        display_characteristic_page("anchors", extraction_files.get("anchors", []), feedback_logs.get("anchors", []))
     
-    elif selected_view == "Glazing 🪟":
-        display_characteristic_details('glazing', extractions['glazing'], feedback_logs['glazing'])
+    elif selected_page == "Glazing":
+        display_characteristic_page("glazing", extraction_files.get("glazing", []), feedback_logs.get("glazing", []))
     
-    elif selected_view == "Impact Rating 🌪️":
-        display_characteristic_details('impact_rating', extractions['impact_rating'], feedback_logs['impact_rating'])
+    elif selected_page == "Impact Rating":
+        display_characteristic_page("impact_rating", extraction_files.get("impact_rating", []), feedback_logs.get("impact_rating", []))
     
-    elif selected_view == "Design Pressure 📊":
-        display_characteristic_details('design_pressure', extractions['design_pressure'], feedback_logs['design_pressure'])
+    elif selected_page == "Design Pressure":
+        display_characteristic_page("design_pressure", extraction_files.get("design_pressure", []), feedback_logs.get("design_pressure", []))
     
-    # Footer
-    st.markdown("---")
-    st.markdown("#### 🚀 Quick Commands")
+    elif selected_page == "Analytics":
+        display_analytics_page(extraction_files, feedback_logs)
     
-    commands = [
-        "python adaptive_agent.py --source doc.pdf --characteristic anchors",
-        "python adaptive_agent.py --source doc.pdf --characteristic glazing", 
-        "python adaptive_agent.py --source doc.pdf --characteristic impact_rating",
-        "python adaptive_agent.py --source doc.pdf --characteristic design_pressure"
-    ]
-    
-    for cmd in commands:
-        st.code(cmd)
+    # Quick actions in sidebar
+    st.sidebar.subheader("Quick Actions")
+    if st.sidebar.button("Refresh Data", key="refresh_button"):
+        st.rerun()
 
 if __name__ == "__main__":
     main()

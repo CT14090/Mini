@@ -1,0 +1,209 @@
+[
+  {
+    "document_id": "1829b83cc2d1",
+    "characteristic": "anchors",
+    "timestamp": "2025-09-13T15:55:00.148460",
+    "quality_scores": {
+      "content_relevance": 4,
+      "extraction_quality": 3,
+      "reference_alignment": 4,
+      "overall_assessment": "The extraction process successfully identified relevant anchors-related content in text summaries, images, and tables. However, there are minor issues with precision, such as irrelevant items being included and potential missing anchor types. Reference alignment is strong, with most extracted items matching the provided descriptions and examples."
+    },
+    "content_analysis": {
+      "correctly_identified": [
+        "anchors_summary_8973 (text summary about anchor verification calculations)",
+        "anchors_4_3018 (image showing anchor details from page 4)",
+        "anchors_table_8_0 (table containing anchor specifications and data)"
+      ],
+      "incorrectly_classified": [
+        "anchors_4_3204 (image with low confidence and unclear anchor relevance)",
+        "anchors_4_3443 (image with partial relevance but not clearly showing anchor details)"
+      ],
+      "missing_content": [
+        "Directly Into Wood anchors",
+        "Self Drilling Screws Into Metal Structures"
+      ],
+      "strengths": [
+        "Effective use of reference matching to identify relevant anchor images.",
+        "Captured detailed anchor specifications in tables.",
+        "Text summary includes structural and compliance-related anchor information."
+      ],
+      "weaknesses": [
+        "Low precision in image classification, leading to inclusion of less relevant items.",
+        "Potential underrepresentation of certain anchor types, such as wood and metal anchors.",
+        "Confidence threshold may be too low, allowing less relevant items to pass."
+      ]
+    },
+    "parameter_changes": [
+      "confidence_threshold: 0.25 \u2192 0.35",
+      "content_classification_threshold: 0.15 \u2192 0.2",
+      "skip_pages: 3 \u2192 2",
+      "image_size_min: 100 \u2192 120",
+      "max_extractions: 15 \u2192 12"
+    ],
+    "reasoning": "Increasing the confidence threshold to 0.35 will reduce the inclusion of irrelevant items, improving precision. Raising the content classification threshold to 0.20 will further refine the filtering of anchor-related content. Reducing skip_pages to 2 ensures potentially relevant pages are not overlooked. Increasing image_size_min to 120 will help exclude smaller, less detailed images that may not provide meaningful anchor information. Lowering max_extractions to 12 will focus on higher-quality items, avoiding over-extraction of marginally relevant content.",
+    "reference_data_used": {
+      "total_references": 11,
+      "has_descriptions": true,
+      "has_images": true
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_type": "comprehensive_characteristic_analysis"
+  },
+  {
+    "document_id": "d09c908eb98f",
+    "characteristic": "anchors",
+    "timestamp": "2025-09-14T17:49:56.704891",
+    "quality_scores": {
+      "content_relevance": 4,
+      "extraction_quality": 3,
+      "reference_alignment": 4,
+      "overall_assessment": "The extraction process captured relevant anchors-related content, including text summaries, images, and tables. However, there were some issues with precision, as a few items were either misclassified or lacked sufficient detail to confirm their relevance. The alignment with reference data was generally strong, but there is room for improvement in filtering out irrelevant content and ensuring all anchor types are represented."
+    },
+    "content_analysis": {
+      "correctly_identified": [
+        "anchors_3_7183",
+        "anchors_3_7351",
+        "anchors_3_7476",
+        "anchors_table_8_0"
+      ],
+      "incorrectly_classified": [
+        "anchors_summary_6957"
+      ],
+      "missing_content": [
+        "Into Concrete via 1By Buck",
+        "Into Concrete via 2By Buck"
+      ],
+      "strengths": [
+        "Captured a variety of anchor-related images with reasonable confidence.",
+        "Included a table with anchor specifications, which aligns with reference data.",
+        "Text summaries provided some context about anchor verification and compliance."
+      ],
+      "weaknesses": [
+        "Text summary lacked clarity and relevance, with low confidence and excessive generality.",
+        "Some images were repetitive and did not add new information.",
+        "Potentially missed specific anchor types, such as those involving wood bucks."
+      ]
+    },
+    "parameter_changes": [
+      "confidence_threshold: 0.35 \u2192 0.45",
+      "content_classification_threshold: 0.2 \u2192 0.3",
+      "skip_pages: 2 \u2192 1",
+      "image_size_min: 120 \u2192 150",
+      "max_extractions: 12 \u2192 10"
+    ],
+    "reasoning": "Increasing the confidence_threshold to 0.45 will reduce false positives and improve precision, ensuring only high-confidence items are extracted. Raising the content_classification_threshold to 0.3 will help filter out irrelevant content, especially in text summaries. Reducing skip_pages to 1 ensures more pages are analyzed, potentially capturing missing anchor types. Increasing image_size_min to 150 will eliminate smaller, less detailed images that may not provide useful information. Lowering max_extractions to 10 will focus on extracting the most relevant items, avoiding redundancy and improving overall quality.",
+    "reference_data_used": {
+      "total_references": 11,
+      "has_descriptions": true,
+      "has_images": true
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_type": "comprehensive_characteristic_analysis"
+  },
+  {
+    "document_id": "0df50c8299ca",
+    "characteristic": "anchors",
+    "timestamp": "2025-09-14T22:28:05.467096",
+    "quality_scores": {
+      "content_relevance": 4,
+      "extraction_quality": 3,
+      "reference_alignment": 3,
+      "overall_assessment": "The extraction process successfully identified some anchor-related content, including images and a table with relevant specifications. However, there were issues with low confidence scores for some items, potential misclassification of images, and missing text summaries. The alignment with reference data was moderate, but improvements are needed to ensure higher precision and completeness."
+    },
+    "content_analysis": {
+      "correctly_identified": [
+        "anchors_2_4189 (image showing anchors from page 2)",
+        "anchors_table_8_0 (table with anchor specifications)"
+      ],
+      "incorrectly_classified": [
+        "anchors_2_4022 (low confidence and unclear relevance)",
+        "anchors_2_4409 (low confidence and unclear relevance)"
+      ],
+      "missing_content": [
+        "Text summaries describing anchor types and placement",
+        "Images showing specific anchor types like 'Into Concrete via 2By Buck'"
+      ],
+      "strengths": [
+        "Captured a relevant table with anchor specifications",
+        "Included images that partially align with anchor-related content"
+      ],
+      "weaknesses": [
+        "Low confidence scores for several extracted items",
+        "No text summaries extracted despite potential relevance",
+        "Some images may not clearly depict anchor details",
+        "Missed capturing specific anchor types described in the reference data"
+      ]
+    },
+    "parameter_changes": [
+      "confidence_threshold: 0.45 \u2192 0.55",
+      "content_classification_threshold: 0.3 \u2192 0.4",
+      "image_size_min: 150 \u2192 200",
+      "max_extractions: 10 \u2192 8"
+    ],
+    "reasoning": "Increasing the confidence_threshold to 0.55 will filter out low-confidence items, improving precision. Raising the content_classification_threshold to 0.4 will help focus on more relevant content. Increasing image_size_min to 200 ensures higher-quality images are prioritized. Reducing max_extractions to 8 will limit irrelevant content and focus on high-confidence items. These adjustments aim to enhance the accuracy and relevance of the extracted anchors data.",
+    "reference_data_used": {
+      "total_references": 11,
+      "has_descriptions": true,
+      "has_images": true
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_type": "comprehensive_characteristic_analysis"
+  },
+  {
+    "document_id": "f7c9191fadd9",
+    "characteristic": "anchors",
+    "timestamp": "2025-09-15T17:14:42.443179",
+    "quality_scores": {
+      "content_relevance": 3,
+      "extraction_quality": 3,
+      "reference_alignment": 2,
+      "overall_assessment": "The extraction process identified some relevant anchor-related content, but the quality and alignment with reference data were inconsistent. While images were extracted, their confidence scores were low, and there was redundancy in the extracted items. Text summaries were not utilized, and no tables with anchor specifications were identified. The process missed opportunities to capture more diverse anchor types and failed to filter out irrelevant or redundant content effectively."
+    },
+    "content_analysis": {
+      "correctly_identified": [
+        "anchors_2_7836",
+        "anchors_2_7996"
+      ],
+      "incorrectly_classified": [
+        "anchors_2_8282",
+        "other redundant or low-confidence items"
+      ],
+      "missing_content": [
+        "Tables with anchor specifications",
+        "Text summaries describing anchor types",
+        "Images showing diverse anchor types (e.g., self-drilling screws, anchors into wood via buck)"
+      ],
+      "strengths": [
+        "Captured some anchor-related images",
+        "Utilized dynamic region detection to identify potential anchor content"
+      ],
+      "weaknesses": [
+        "Low confidence scores for extracted images",
+        "Redundant items extracted from the same page",
+        "No text summaries or tables were captured",
+        "Limited diversity in anchor types identified",
+        "Weak alignment with reference descriptions and images"
+      ]
+    },
+    "parameter_changes": [
+      "confidence_threshold: 0.55 \u2192 0.65",
+      "content_classification_threshold: 0.4 \u2192 0.3",
+      "skip_pages: 1 \u2192 0",
+      "image_size_min: 200 \u2192 250",
+      "max_extractions: 8 \u2192 10"
+    ],
+    "reasoning": "Increasing the confidence_threshold to 0.65 will help filter out low-confidence items, improving precision. Raising the content_classification_threshold to 0.3 will ensure better alignment with anchor-related content. Setting skip_pages to 0 will ensure no pages are missed, as skipping pages may overlook relevant anchor details. Increasing image_size_min to 250 will help focus on higher-quality images, reducing noise. Lowering max_extractions to 10 will reduce redundancy and focus on extracting the most relevant items. These adjustments aim to improve the precision and relevance of the extraction process while minimizing irrelevant or redundant content.",
+    "reference_data_used": {
+      "total_references": 11,
+      "has_descriptions": true,
+      "has_images": true
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_type": "comprehensive_characteristic_analysis"
+  }
+]

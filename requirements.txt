@@ -1,26 +1,29 @@
-# Core document processing
-docling>=1.0.0
-python-dotenv>=1.0.0
+# Enhanced Window Characteristic Document Agent Requirements
 
-# Computer vision and image processing  
+# Core PDF and Image Processing
+pdf2image>=3.1.0
 opencv-python>=4.8.0
 Pillow>=10.0.0
 numpy>=1.24.0
 
-# LLM integration for characteristic-specific feedback
+# Advanced Document Processing
+docling>=1.0.0
+docling-core>=1.0.0
+
+# Azure OpenAI Integration
 langchain-openai>=0.1.0
 langchain-core>=0.2.0
-langchain>=0.2.0
 
-# Web interface for viewing results
+# Environment Management
+python-dotenv>=1.0.0
+
+# Web Interface
 streamlit>=1.28.0
+pandas>=2.0.0
+plotly>=5.15.0
 
-# HTTP requests for URL downloading
+# Utilities
 requests>=2.31.0
 
-# Standard library dependencies (no install needed)
-# json, os, pathlib, sqlite3, sys, subprocess, time, hashlib, argparse
-# io, base64, tempfile, datetime, typing, dataclasses, enum
-
-# Optional dependencies for enhanced functionality  
-# azure-openai>=1.0.0  # Alternative client if langchain has issues
+# Optional: For better performance
+# watchdog>=3.0.0

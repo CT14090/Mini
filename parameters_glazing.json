@@ -1,0 +1,11 @@
+{
+  "confidence_threshold": 0.5,
+  "content_classification_threshold": 0.4,
+  "skip_pages": 1,
+  "image_size_min": 200,
+  "min_section_length": 100,
+  "max_extractions": 25,
+  "table_relevance_threshold": 1,
+  "text_summary_enabled": true,
+  "reference_matching_enabled": true
+}

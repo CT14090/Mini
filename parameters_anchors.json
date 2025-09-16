@@ -1,8 +1,8 @@
 {
-  "confidence_threshold": 0.25,
+  "confidence_threshold": 0.65,
   "min_section_length": 100,
-  "max_extractions": 15,
-  "image_size_min": 100,
-  "skip_pages": 3,
-  "content_classification_threshold": 0.15
+  "max_extractions": 10,
+  "image_size_min": 250,
+  "skip_pages": 0,
+  "content_classification_threshold": 0.3
 }

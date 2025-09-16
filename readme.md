@@ -1,248 +1,388 @@
-# Window Characteristics Extraction Agent
+# Enhanced Window Characteristic Document Agent
 
-AI-powered system for extracting specific window characteristics from construction documents with reference data matching and LLM feedback.
+An AI-powered system that extracts and classifies window characteristics from construction documents using labeled reference data, computer vision, and Azure OpenAI feedback.
 
-## Features
+## Overview
 
-- **Text-First Approach**: Summarizes relevant text before extracting images/tables
-- **Reference Data Matching**: Uses your example images for better content identification
-- **LLM Feedback**: Azure OpenAI analyzes extractions and optimizes parameters
-- **Page Filtering**: Skips irrelevant pages (first 3 by default)
-- **4 Characteristics**: Anchors, Glazing, Impact Rating, Design Pressure
+This enhanced system transforms window document processing by:
+
+1. **Characteristic-Specific Extraction**: Focuses on 4 key window characteristics (anchors, glazing, impact rating, design pressure)
+2. **Reference Data Training**: Uses your labeled images and descriptions for accurate classification
+3. **Multi-Modal Content**: Extracts text summaries, images, and tables for each characteristic
+4. **AI-Powered Feedback**: Azure OpenAI analyzes extractions and optimizes parameters
+5. **Continuous Learning**: System improves with each processed document and feedback cycle
+
+## Key Features
+
+### 🎯 Window Characteristic Focus
+
+- **Anchors**: Connection and fastening systems (concrete, wood, buck installations)
+- **Glazing**: Glass specifications, IGU details, coatings, thermal properties
+- **Impact Rating**: Small/large missile ratings, ASTM compliance, hurricane certifications
+- **Design Pressure**: DP ratings, wind loads, structural performance data
+
+### 🖼️ Enhanced Content Extraction
+
+- **Text Summaries**: Keyword-filtered summaries relevant to each characteristic
+- **Image Classification**: Reference-based matching with confidence scoring
+- **Table Extraction**: Filtered tables containing characteristic-specific data
+- **Page Intelligence**: Smart page skipping and region detection
+
+### 🤖 Azure OpenAI Integration
+
+- **Comprehensive Analysis**: AI evaluates content relevance and extraction quality
+- **Reference Alignment**: Compares extractions against your training data
+- **Parameter Optimization**: Automatic threshold adjustments for better accuracy
+- **Detailed Feedback**: Quality scores and specific improvement recommendations
 
 ## Quick Start
 
-### 1. Setup
+### 1. Installation
 
 ```bash
-python setup.py
+# Core dependencies
+pip install -r requirements.txt
+
+# System dependencies (Ubuntu/Debian)
+sudo apt-get install poppler-utils
+
+# System dependencies (macOS with Homebrew)
+brew install poppler
 ```
 
-### 2. Configure Azure OpenAI (Optional but Recommended)
+### 2. Configure Azure OpenAI
 
-Edit `.env` file with your credentials:
-
-```
+```bash
+cp .env.example .env
+# Edit .env with your Azure credentials:
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-api-key
 AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 ```
 
-### 3. Add Reference Data
-
-Add example images to `labeled_data/{characteristic}/` folders:
-
-- `labeled_data/anchors/` - Anchor installation images
-- `labeled_data/glazing/` - Glass section images
-- `labeled_data/impact_rating/` - Test result images
-- `labeled_data/design_pressure/` - Pressure table images
-
-### 4. Extract Content
+### 3. Setup Reference Data
 
 ```bash
-# Extract anchor information
-python adaptive_agent.py --source document.pdf --characteristic anchors
-
-# Extract with debug output
-python adaptive_agent.py --source document.pdf --characteristic glazing --debug
+# Create the reference data structure
+python adaptive_agent.py --setup-reference-data
 ```
 
-### 5. View Results
+This creates a `labeled_data/` directory with characteristic-specific folders:
+
+```
+labeled_data/
+├── anchors/              # Anchor connection examples
+├── glazing/              # Glass and glazing examples
+├── impact_rating/        # Impact test and rating examples
+└── design_pressure/      # Pressure and load examples
+```
+
+**Add your reference data**:
+
+- Place example images (JPG/PNG) in each folder
+- Edit the `descriptions.json` file in each folder with detailed descriptions
+- The system uses these references to identify similar content in new documents
+
+### 4. Process Documents
 
 ```bash
+# Process all window characteristics
+python adaptive_agent.py --source document.pdf
+
+# Process specific characteristics only
+python adaptive_agent.py --source document.pdf --characteristics anchors glazing
+
+# With debug output
+python adaptive_agent.py --source document.pdf --debug
+```
+
+### 5. Test Azure OpenAI Connection
+
+```bash
+# Verify Azure OpenAI is working
+python llm_feedback.py --test-connection
+```
+
+### 6. View Results
+
+```bash
+# Launch the results viewer (if available)
 streamlit run feedback_interface.py
 ```
 
-## Commands
+## Workflow
 
-### Basic Extraction
+### Step 1: Document Processing
 
-```bash
-python adaptive_agent.py --source document.pdf --characteristic anchors
-python adaptive_agent.py --source document.pdf --characteristic glazing
-python adaptive_agent.py --source document.pdf --characteristic impact_rating
-python adaptive_agent.py --source document.pdf --characteristic design_pressure
-```
+The system converts PDF pages to images and extracts text using Docling for comprehensive analysis.
 
-### Debug Mode
+### Step 2: Characteristic Extraction
 
-```bash
-python adaptive_agent.py --source document.pdf --characteristic anchors --debug
-```
+For each window characteristic:
 
-### View Parameters
+- **Text Analysis**: Extracts keyword-filtered summaries from document text
+- **Image Processing**: Uses computer vision to find regions, then matches against reference images
+- **Table Extraction**: Identifies and filters tables containing relevant specifications
 
-```bash
-python adaptive_agent.py --test-params --characteristic anchors --source dummy
-```
+### Step 3: Reference-Based Classification
+
+- **Image Matching**: SIFT/ORB features, histogram correlation, edge density comparison
+- **Text Filtering**: Keyword matching against characteristic-specific vocabularies
+- **Confidence Scoring**: Multi-metric similarity scoring with adaptive thresholds
+
+### Step 4: AI Feedback and Optimization
+
+Azure OpenAI with vision capabilities:
+
+- **Content Evaluation**: Assesses relevance, completeness, and accuracy
+- **Reference Alignment**: Compares extractions against your training data
+- **Parameter Tuning**: Recommends threshold adjustments for improved performance
+- **Quality Scoring**: Provides detailed feedback on extraction quality
 
 ## File Structure
 
 ```
-window-agent/
-├── adaptive_agent.py                 # Main extraction agent
-├── feedback_interface.py             # Streamlit viewer
-├── setup.py                         # Setup script
-├── requirements.txt                  # Dependencies
-├── .env                             # Azure OpenAI config
-│
-├── data/
-│   └── input_pdfs/                  # Place PDFs here
-│
-├── labeled_data/                    # Reference data
-│   ├── README.md                    # Reference instructions
-│   ├── anchors/
-│   │   ├── descriptions.json       # Anchor descriptions
-│   │   └── [reference images]      # Add .jpg/.png files
-│   ├── glazing/
-│   ├── impact_rating/
-│   └── design_pressure/
-│
-├── feedback_data/                   # Extraction results
-│   ├── anchors_extraction_[id].json
-│   ├── glazing_extraction_[id].json
-│   └── ...
-│
-├── parameters_anchors.json          # Anchor parameters
-├── parameters_glazing.json          # Glazing parameters
-├── parameters_impact_rating.json    # Impact parameters
-├── parameters_design_pressure.json  # Pressure parameters
-│
-└── feedback_log_[characteristic].json # LLM feedback logs
+enhanced-window-agent/
+├── adaptive_agent.py              # Main processing script
+├── llm_feedback.py                # Azure OpenAI feedback analyzer
+├── requirements.txt               # Dependencies
+├── .env                          # Azure OpenAI configuration
+├── labeled_data/                 # Reference training data
+│   ├── anchors/                  # Anchor reference images & descriptions
+│   ├── glazing/                  # Glazing reference images & descriptions
+│   ├── impact_rating/            # Impact rating references
+│   └── design_pressure/          # Design pressure references
+├── feedback_data/                # Extraction results
+│   ├── anchors_extraction_*.json # Anchor extraction data
+│   ├── glazing_extraction_*.json # Glazing extraction data
+│   └── ...                       # Other characteristic extractions
+├── parameters_*.json             # Characteristic-specific parameters
+└── feedback_log_*.json          # AI feedback history
 ```
-
-## Window Characteristics
-
-### 1. Anchors
-
-Extracts anchor types and installation methods:
-
-- Directly Into Concrete
-- Directly Into Wood
-- Into Wood via 1By Buck
-- Into Concrete via 1By Buck
-- Into Concrete via 2By Buck
-- Self Drilling Screws Into Metal
-
-### 2. Glazing
-
-Extracts glass specifications:
-
-- Glass type and thickness
-- Low-E coatings
-- IGU configurations
-- Laminated/tempered specifications
-
-### 3. Impact Rating
-
-Extracts impact resistance data:
-
-- Small Missile Impact
-- Large Missile Impact
-- Both Missile Impact
-- Hurricane compliance
-
-### 4. Design Pressure
-
-Extracts pressure specifications:
-
-- Design pressure tables
-- Wind load ratings
-- Structural performance data
-
-## How It Works
-
-1. **Page Filtering**: Skips first 3 pages (logos, covers, etc.)
-2. **Text Summarization**: Finds and summarizes relevant text content
-3. **Image Extraction**: Extracts images using context + reference matching
-4. **Table Extraction**: Finds tables with characteristic-specific data
-5. **LLM Feedback**: Azure OpenAI evaluates results and improves parameters
 
 ## Parameters
 
-Each characteristic has its own parameter file:
+Each characteristic has its own optimizable parameters:
+
+### Extraction Parameters
+
+- **confidence_threshold** (0.2-0.8): Minimum similarity to reference data
+- **content_classification_threshold** (0.15-0.4): Content relevance threshold
+- **skip_pages** (0-10): Number of early pages to skip
+- **image_size_min** (50-500): Minimum image region size
+- **max_extractions** (5-50): Maximum items per characteristic
+
+### Processing Parameters
+
+- **text_summary_enabled** (true/false): Enable text summary extraction
+- **reference_matching_enabled** (true/false): Enable reference data matching
+- **table_relevance_threshold** (1-5): Minimum table relevance score
+- **min_section_length** (50-500): Minimum text section length
+
+## Example Usage
+
+```bash
+# First time setup
+python adaptive_agent.py --setup-reference-data
+
+# Add your reference images and descriptions to labeled_data/ folders
+
+# Test current parameters for a characteristic
+python adaptive_agent.py --test-params anchors
+
+# Process a document for all characteristics
+python adaptive_agent.py --source noa_window_document.pdf
+
+# Process specific characteristics with debug
+python adaptive_agent.py --source document.pdf --characteristics glazing impact_rating --debug
+
+# Test Azure OpenAI integration
+python llm_feedback.py --test-connection
+
+# View feedback history for a characteristic
+python llm_feedback.py --show-log --characteristic anchors
+
+# Manual analysis of specific extraction
+python llm_feedback.py --enhanced-analyze glazing doc123 --source-pdf document.pdf
+```
+
+## Reference Data Guidelines
+
+### Image Quality
+
+- **Resolution**: Minimum 200x200 pixels, ideally 300x300+
+- **Clarity**: Sharp, high-contrast images showing characteristic details
+- **Variety**: Multiple examples per characteristic type
+- **Relevance**: Clear examples of the specific characteristic
+
+### Descriptions Format
+
+Edit `descriptions.json` in each characteristic folder:
 
 ```json
 {
-  "confidence_threshold": 0.25,
-  "min_section_length": 100,
-  "max_extractions": 15,
-  "image_size_min": 100,
-  "skip_pages": 3,
-  "content_classification_threshold": 0.15
+  "anchor_type_1": "Detailed description of this anchor type...",
+  "anchor_type_2": "Another anchor variation description...",
+  "installation_method": "Description of installation approach..."
 }
 ```
 
-These are automatically optimized by LLM feedback.
+### Characteristic-Specific Examples
 
-## Reference Data
-
-Adding reference images dramatically improves accuracy:
-
-1. **Anchors**: Add photos of anchor installations, connection details
-2. **Glazing**: Add glass section drawings, IGU details
-3. **Impact Rating**: Add test certificates, rating tables
-4. **Design Pressure**: Add DP tables, load charts
-
-Use descriptive filenames like `concrete_anchor_detail.jpg`.
+**anchors/**: Fastener diagrams, connection details, installation specifications
+**glazing/**: Glass specs, IGU details, coating information, thermal data  
+**impact_rating/**: Test certificates, missile ratings, compliance documentation
+**design_pressure/**: DP ratings, wind load data, structural performance charts
 
 ## Troubleshooting
 
-### "Docling not available"
+### Common Issues
+
+**"Azure OpenAI configuration missing"**
 
 ```bash
-pip install docling>=1.0.0
+# Check .env file has all required variables
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-api-key
+AZURE_OPENAI_DEPLOYMENT=your-deployment-name
 ```
 
-### "No relevant content found"
-
-- Add reference images to `labeled_data/{characteristic}/`
-- Lower thresholds in `parameters_{characteristic}.json`
-- Use `--debug` to see what's being analyzed
-
-### "LLM feedback failed"
-
-- Configure Azure OpenAI in `.env` file
-- System works without LLM but parameters won't auto-optimize
-
-### "Computer vision not available"
+**"No reference data found"**
 
 ```bash
-pip install opencv-python Pillow numpy
+python adaptive_agent.py --setup-reference-data
+# Then add your training images and descriptions
 ```
+
+**"Low extraction count"**
+
+- Add more reference images to relevant characteristics
+- Lower confidence thresholds in parameters
+- Check if PDF contains the expected content types
+
+**"High irrelevant extractions"**
+
+- Improve reference data quality and specificity
+- Increase confidence and classification thresholds
+- Review and refine characteristic descriptions
+
+### Debug Commands
+
+```bash
+# Test Azure OpenAI connection
+python llm_feedback.py --test-connection
+
+# Show current parameters for characteristic
+python adaptive_agent.py --test-params glazing
+
+# Process with detailed debug output
+python adaptive_agent.py --source document.pdf --debug
+
+# View detailed feedback history
+python llm_feedback.py --show-log --characteristic anchors
+
+# Manual extraction analysis
+python llm_feedback.py --enhanced-analyze impact_rating doc123 --source-pdf document.pdf --debug
+```
+
+### Performance Optimization
+
+**Improving Accuracy:**
+
+- Add more diverse, high-quality reference images
+- Refine characteristic descriptions with specific terminology
+- Use debug mode to identify classification issues
+- Review AI feedback recommendations
+
+**Reducing False Positives:**
+
+- Increase confidence_threshold (e.g., 0.4 → 0.6)
+- Increase content_classification_threshold (e.g., 0.2 → 0.3)
+- Improve reference data specificity
+- Remove poor quality reference images
+
+**Increasing Recall:**
+
+- Lower confidence thresholds moderately
+- Add more reference examples covering edge cases
+- Reduce skip_pages if content appears early
+- Increase max_extractions limit
+
+## Advanced Features
+
+### AI Feedback Integration
+
+The system automatically runs AI analysis after each extraction:
+
+1. **Content Evaluation**: Scores extraction relevance and quality
+2. **Reference Comparison**: Checks alignment with your training data
+3. **Parameter Recommendations**: Suggests specific threshold adjustments
+4. **Learning Loop**: Continuously improves extraction accuracy
+
+### Characteristic-Specific Optimization
+
+Each window characteristic has:
+
+- Individual parameter files that adapt over time
+- Specific keyword vocabularies for filtering
+- Tailored reference matching algorithms
+- Characteristic-focused AI analysis prompts
+
+### Multi-Modal Output
+
+Extractions include:
+
+- **Text summaries** with keyword-filtered content
+- **Images** with confidence scores and reference matches
+- **Tables** with relevance scoring and data point analysis
+- **Metadata** including extraction methods and quality metrics
+
+## System Requirements
+
+- **Python**: 3.8+
+- **Memory**: 8GB+ RAM recommended for large documents
+- **Storage**: ~2GB for dependencies, varies with document processing
+- **Azure OpenAI**: Required for optimal feedback and parameter tuning
+- **Poppler**: Required for PDF to image conversion
 
 ## Dependencies
 
-```bash
-pip install docling python-dotenv streamlit requests
-pip install opencv-python Pillow numpy  # For reference matching
-pip install langchain-openai langchain-core  # For LLM feedback
-```
+**Core Processing:**
 
-## Examples
+- pdf2image: PDF to image conversion
+- opencv-python: Computer vision and image processing
+- Pillow: Image manipulation and processing
+- numpy: Numerical processing and feature extraction
 
-### Extract Anchors
+**Text and Table Extraction:**
 
-```bash
-python adaptive_agent.py --source specs.pdf --characteristic anchors
-```
+- docling: Advanced PDF text and table extraction
+- docling-core: Core PDF processing functionality
 
-Output:
+**AI Integration:**
 
-- Finds anchor-related text sections
-- Extracts images showing connection details
-- Extracts tables with fastener specifications
-- Matches against your reference anchor images
-- LLM optimizes parameters for better results
+- langchain-openai: Azure OpenAI integration
+- langchain-core: Core LangChain functionality for LLM interaction
 
-### View Results
+**Environment:**
 
-```bash
-streamlit run feedback_interface.py
-```
+- python-dotenv: Environment variable management
 
-See extracted images, tables, and text organized by characteristic with confidence scores.
+## Support and Optimization
 
----
+**Getting Better Results:**
 
-**System Requirements**: Python 3.8+, ~2GB RAM for document processing
+1. **Improve Reference Data**: Add more high-quality, diverse examples
+2. **Refine Descriptions**: Use specific terminology in descriptions.json
+3. **Monitor AI Feedback**: Review feedback logs for improvement suggestions
+4. **Tune Parameters**: Use AI recommendations to optimize thresholds
+5. **Iterative Improvement**: System learns and improves with each processed document
+
+**Configuration Help:**
+
+- Verify Azure OpenAI credentials are correctly set
+- Ensure reference data covers your document types
+- Use debug mode to understand extraction decisions
+- Review AI feedback for parameter optimization guidance
+
+This enhanced system provides comprehensive window characteristic extraction with continuous AI-powered optimization, ensuring high accuracy and relevance for construction document analysis.
