@@ -1,29 +1,29 @@
-# Enhanced Window Characteristic Document Agent Requirements
-
-# Core PDF and Image Processing
-pdf2image>=3.1.0
-opencv-python>=4.8.0
+# Core document processing
+pdf2image>=1.17.0
 Pillow>=10.0.0
+
+# Computer vision and image processing
+opencv-python>=4.8.0
 numpy>=1.24.0
+scikit-image>=0.21.0
 
-# Advanced Document Processing
-docling>=1.0.0
-docling-core>=1.0.0
-
-# Azure OpenAI Integration
+# Enhanced AI and LangChain
 langchain-openai>=0.1.0
 langchain-core>=0.2.0
 
-# Environment Management
-python-dotenv>=1.0.0
+# Document parsing and table extraction
+docling>=1.0.0
 
-# Web Interface
+# Web interface and visualization
 streamlit>=1.28.0
 pandas>=2.0.0
-plotly>=5.15.0
+matplotlib>=3.7.0
 
-# Utilities
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# HTTP requests (for downloads)
 requests>=2.31.0
 
-# Optional: For better performance
-# watchdog>=3.0.0
+# Time utilities
+python-dateutil>=2.8.0

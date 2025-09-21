@@ -1,0 +1,428 @@
+[
+  {
+    "document_id": "acd044458c36",
+    "timestamp": "2025-09-16T20:15:17.609407",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "correct_classifications": 2,
+      "accuracy_rate": 0.2,
+      "category_breakdown": {
+        "impact_rating": {
+          "correct": 2,
+          "total": 5
+        },
+        "glazing": {
+          "correct": 0,
+          "total": 1
+        },
+        "anchors": {
+          "correct": 0,
+          "total": 4
+        }
+      }
+    },
+    "common_issues": [
+      "Extracting text paragraphs instead of technical diagrams"
+    ],
+    "misclassification_details": [
+      {
+        "item": 1,
+        "predicted": "impact_rating",
+        "vision_assessment": "General text document describing the scope and validity of a Notice of Acceptance (NOA) for materials.",
+        "confidence": 0.6858509980636321,
+        "reason": "The extracted image contains narrative content about the scope and validity of an NOA, which does not align with the 'Impact Rating' category that typically includes specific performance data or classifications such as 'Large Missile Impact Resistant' or 'None'."
+      },
+      {
+        "item": 2,
+        "predicted": "impact_rating",
+        "vision_assessment": "General text narrative related to NOA (Notice of Acceptance) documentation and procedures.",
+        "confidence": 0.7103387001233025,
+        "reason": "The extracted image contains narrative text about NOA expiration, advertisement, and documentation procedures, which does not align with the 'Impact Rating' category that typically includes specific performance data or classifications such as missile impact resistance."
+      },
+      {
+        "item": 3,
+        "predicted": "glazing",
+        "vision_assessment": "Notice of Acceptance (NOA) document text issued by Miami-Dade County, describing regulatory approval for construction materials",
+        "confidence": 0.6547488818109205,
+        "reason": "The extracted image contains a text-based regulatory document, not a technical diagram or detail related to glazing. Reference images show detailed glazing diagrams, which are technical and specific to glass installation or specifications."
+      },
+      {
+        "item": 5,
+        "predicted": "impact_rating",
+        "vision_assessment": "General narrative text related to NOA (Notice of Acceptance) requirements and disclaimers",
+        "confidence": 0.6785250531955164,
+        "reason": "The extracted image contains narrative text about labeling, renewal, and advertisement requirements for NOA, which does not match the 'Impact Rating' category. Reference images for 'Impact Rating' specifically describe missile impact resistance ratings."
+      },
+      {
+        "item": 7,
+        "predicted": "anchors",
+        "vision_assessment": "text paragraph containing legal and procedural information related to product approval and NOA (Notice of Acceptance)",
+        "confidence": 0.6376582311462738,
+        "reason": "The extracted image is a text paragraph, whereas the reference images for the 'anchors' category are technical diagrams showing hardware details, anchor placements, and architectural drawings. The content types are fundamentally different."
+      }
+    ],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 10000,
+        "edge_detection_threshold": 40.0,
+        "confidence_threshold": 0.78,
+        "similarity_threshold": 0.8250000000000001,
+        "min_image_size": 195.0,
+        "template_match_threshold": 0.77,
+        "max_images_per_category": 8.0
+      },
+      "reasoning": "Very low accuracy (20.0%) - increasing selectivity to focus on diagrams; Extracting text instead of diagrams - increasing size filters; High extraction count (111) with low accuracy - increasing quality filters"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "poor",
+      "accuracy_rate": 0.2,
+      "confidence_score": 1.0,
+      "details": "2/10 correctly classified, 10 high confidence"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "c0efe515d7b0",
+    "timestamp": "2025-09-17T20:44:20.237776",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 0,
+      "correct_classifications": 0,
+      "accuracy_rate": 0,
+      "category_breakdown": {}
+    },
+    "common_issues": [],
+    "misclassification_details": [],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 15000.0,
+        "edge_detection_threshold": 32.0,
+        "confidence_threshold": 0.85,
+        "similarity_threshold": 0.9
+      },
+      "reasoning": "Very low accuracy (0.0%) - increasing selectivity to focus on diagrams"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "unknown",
+      "details": "No vision analysis performed"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "d20b9a7e3bf7",
+    "timestamp": "2025-09-18T14:12:43.132910",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 2,
+      "correct_classifications": 0,
+      "accuracy_rate": 0.0,
+      "category_breakdown": {
+        "anchors": {
+          "correct": 0,
+          "total": 2
+        }
+      }
+    },
+    "common_issues": [
+      "Extracting text paragraphs instead of technical diagrams"
+    ],
+    "misclassification_details": [
+      {
+        "item": 1,
+        "predicted": "anchors",
+        "vision_assessment": "The extracted image contains a text-based document, specifically a Notice of Acceptance (NOA) for a construction product, which includes regulatory information, product descriptions, and compliance details.",
+        "confidence": 0.6670990478892007,
+        "reason": "The extracted image is a text document, not a technical diagram or drawing related to anchors. The reference images are detailed technical diagrams showing anchor hardware and installation details, which are entirely different in content type and purpose."
+      },
+      {
+        "item": 2,
+        "predicted": "anchors",
+        "vision_assessment": "Text document describing evidence submission details, including references to drawings and specifications.",
+        "confidence": 0.5607088725715536,
+        "reason": "The extracted image is a text-based narrative document, not a technical diagram or hardware detail related to anchors. It lacks visual or technical content typically associated with the 'anchors' category, such as diagrams showing anchor placement or specifications."
+      }
+    ],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 20000,
+        "edge_detection_threshold": 30,
+        "confidence_threshold": 0.85,
+        "similarity_threshold": 0.9,
+        "min_image_size": 250,
+        "template_match_threshold": 0.8470000000000001
+      },
+      "reasoning": "Very low accuracy (0.0%) - increasing selectivity to focus on diagrams; Extracting text instead of diagrams - increasing size filters"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "poor",
+      "accuracy_rate": 0.0,
+      "confidence_score": 1.0,
+      "details": "0/2 correctly classified, 2 high confidence"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "8d17a4da7894",
+    "timestamp": "2025-09-19T17:08:46.876202",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 3,
+      "correct_classifications": 0,
+      "accuracy_rate": 0.0,
+      "category_breakdown": {
+        "anchors": {
+          "correct": 0,
+          "total": 3
+        }
+      }
+    },
+    "common_issues": [
+      "Extracting text paragraphs instead of technical diagrams",
+      "Misclassifying diagram types (e.g., elevation vs detail)"
+    ],
+    "misclassification_details": [
+      {
+        "item": 1,
+        "predicted": "anchors",
+        "vision_assessment": "A label or certification stamp indicating 'Miami-Dade County Approved'.",
+        "confidence": 0.5630076444149017,
+        "reason": "The extracted image is a certification label, not a technical diagram or hardware detail related to anchors. The reference images show detailed technical drawings of anchors and their installation, which are entirely different in content and purpose."
+      },
+      {
+        "item": 2,
+        "predicted": "anchors",
+        "vision_assessment": "The extracted image contains a text-based document, specifically a Notice of Acceptance (NOA) for a construction product, which includes regulatory information, product descriptions, and compliance details.",
+        "confidence": 0.6520714653134346,
+        "reason": "The extracted image is a text document, not a technical diagram or drawing related to anchors. The reference images show detailed technical diagrams of anchors and their installation, which are entirely different in content type and purpose."
+      },
+      {
+        "item": 3,
+        "predicted": "anchors",
+        "vision_assessment": "Logo of Miami-Dade County",
+        "confidence": 0.5805282589197159,
+        "reason": "The extracted image is a logo and does not contain any technical diagrams, hardware details, or architectural drawings related to anchors as shown in the reference images."
+      }
+    ],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 15000,
+        "edge_detection_threshold": 30,
+        "confidence_threshold": 0.85,
+        "similarity_threshold": 0.9
+      },
+      "reasoning": "Very low accuracy (0.0%) - increasing selectivity to focus on diagrams"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "poor",
+      "accuracy_rate": 0.0,
+      "confidence_score": 1.0,
+      "details": "0/3 correctly classified, 3 high confidence"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "1097603c011b",
+    "timestamp": "2025-09-19T17:12:59.622291",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 2,
+      "correct_classifications": 0,
+      "accuracy_rate": 0.0,
+      "category_breakdown": {
+        "design_pressure": {
+          "correct": 0,
+          "total": 2
+        }
+      }
+    },
+    "common_issues": [
+      "Extracting text paragraphs instead of technical diagrams",
+      "Misclassifying diagram types (e.g., elevation vs detail)"
+    ],
+    "misclassification_details": [
+      {
+        "item": 1,
+        "predicted": "design_pressure",
+        "vision_assessment": "Approval seal indicating Miami-Dade County approval",
+        "confidence": 0.5070834655761719,
+        "reason": "The extracted image is a Miami-Dade County approval seal, which is a certification mark, not a design pressure chart or table. The reference images contain performance data tables with design load capacities, which are entirely different in content and purpose."
+      },
+      {
+        "item": 2,
+        "predicted": "design_pressure",
+        "vision_assessment": "Notice of Acceptance (NOA) document containing general text, product description, and regulatory information.",
+        "confidence": 0.5532542526721954,
+        "reason": "The extracted image is a text-based regulatory document (NOA) and does not contain performance data charts, technical diagrams, or design pressure specifications like the reference images."
+      }
+    ],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 20000,
+        "edge_detection_threshold": 30,
+        "confidence_threshold": 0.85,
+        "similarity_threshold": 0.9,
+        "min_image_size": 250,
+        "template_match_threshold": 0.85
+      },
+      "reasoning": "Very low accuracy (0.0%) - increasing selectivity to focus on diagrams; Extracting text instead of diagrams - increasing size filters"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "poor",
+      "accuracy_rate": 0.0,
+      "confidence_score": 1.0,
+      "details": "0/2 correctly classified, 2 high confidence"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "d211398714f5",
+    "timestamp": "2025-09-19T17:21:43.118935",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "correct_classifications": 1,
+      "accuracy_rate": 0.1,
+      "category_breakdown": {
+        "glazing": {
+          "correct": 1,
+          "total": 10
+        }
+      }
+    },
+    "common_issues": [
+      "Extracting text paragraphs instead of technical diagrams"
+    ],
+    "misclassification_details": [
+      {
+        "item": 1,
+        "predicted": "glazing",
+        "vision_assessment": "Approval label or certification logo",
+        "confidence": 0.5892935677766801,
+        "reason": "The extracted image is a logo or label indicating 'Miami-Dade County Approved,' which is unrelated to technical diagrams, glass specifications, or glazing details shown in the reference images."
+      },
+      {
+        "item": 2,
+        "predicted": "glazing",
+        "vision_assessment": "Text-based document describing product approval and specifications for an aluminum casement window",
+        "confidence": 0.6703418121337891,
+        "reason": "The extracted image is a text document (NOA) detailing product approval and specifications, whereas the reference images are technical diagrams showing glazing details, such as cross-sections of glass and hardware components."
+      },
+      {
+        "item": 3,
+        "predicted": "glazing",
+        "vision_assessment": "Logo of Miami-Dade County",
+        "confidence": 0.5894920566082001,
+        "reason": "The extracted image is a logo containing text and graphic elements, which does not match the technical diagrams or glazing details shown in the reference images. The reference images focus on glass specifications and architectural details, while the extracted image is unrelated to glazing."
+      },
+      {
+        "item": 4,
+        "predicted": "glazing",
+        "vision_assessment": "Text paragraph containing approval information, examiner name, NOA number, and expiration/approval dates",
+        "confidence": 0.5050760082006454,
+        "reason": "The extracted image is a text-based document with administrative information, whereas the reference images are technical diagrams showing glazing details, such as glass specifications and installation components."
+      },
+      {
+        "item": 5,
+        "predicted": "glazing",
+        "vision_assessment": "Window elevation drawings with dimensions and installation notes for aluminum casement windows",
+        "confidence": 0.6753489753007889,
+        "reason": "The extracted image shows window elevation diagrams and installation details, which are not glazing-specific details like those in the reference images. The reference images focus on glazing details such as glass thickness, interlayers, and sealing compounds, while the extracted image is more general and lacks glazing-specific technical details."
+      }
+    ],
+    "parameter_recommendations": {
+      "adjustments": {
+        "contour_min_area": 15000,
+        "edge_detection_threshold": 30,
+        "confidence_threshold": 0.85,
+        "similarity_threshold": 0.9
+      },
+      "reasoning": "Very low accuracy (10.0%) - increasing selectivity to focus on diagrams"
+    },
+    "extraction_quality_assessment": {
+      "overall_quality": "poor",
+      "accuracy_rate": 0.1,
+      "confidence_score": 1.0,
+      "details": "1/10 correctly classified, 10 high confidence"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_validation"
+  },
+  {
+    "document_id": "dc91b0ce9c9d",
+    "timestamp": "2025-09-20T22:50:32.208031",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 5,
+      "correct_classifications": 0,
+      "accuracy_rate": 0.0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.7
+      },
+      "reasoning": "Low accuracy (0.0%) - increasing selectivity"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_simplified"
+  },
+  {
+    "document_id": "591603e61331",
+    "timestamp": "2025-09-20T23:01:05.734859",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 5,
+      "correct_classifications": 0,
+      "accuracy_rate": 0.0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.7
+      },
+      "reasoning": "Low accuracy (0.0%) - increasing selectivity"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_simplified"
+  },
+  {
+    "document_id": "0b63ddde4eb7",
+    "timestamp": "2025-09-20T23:14:13.173374",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 0,
+      "correct_classifications": 0,
+      "accuracy_rate": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.7
+      },
+      "reasoning": "Low accuracy (0.0%) - increasing selectivity"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_simplified"
+  },
+  {
+    "document_id": "7c7f8f055a4c",
+    "timestamp": "2025-09-20T23:19:08.242012",
+    "vision_analysis_summary": {
+      "total_items_analyzed": 0,
+      "correct_classifications": 0,
+      "accuracy_rate": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.7
+      },
+      "reasoning": "Low accuracy (0.0%) - increasing selectivity"
+    },
+    "llm_available": true,
+    "llm_actually_used": true,
+    "analysis_method": "vision_based_simplified"
+  }
+]

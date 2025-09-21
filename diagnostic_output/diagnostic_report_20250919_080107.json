@@ -1,0 +1,447 @@
+{
+  "timestamp": "2025-09-19T08:01:07.223597",
+  "extraction_file": "document.pdf",
+  "total_items_analyzed": 2,
+  "training_data_summary": {
+    "design_pressure": {
+      "image_count": 5,
+      "avg_sift_keypoints": 2351.2,
+      "avg_edge_density": 0.1393736454453189
+    },
+    "glazing": {
+      "image_count": 5,
+      "avg_sift_keypoints": 1040.8,
+      "avg_edge_density": 0.07047251727455325
+    },
+    "impact_rating": {
+      "image_count": 3,
+      "avg_sift_keypoints": 254.33333333333334,
+      "avg_edge_density": 0.1519470839163556
+    },
+    "anchors": {
+      "image_count": 6,
+      "avg_sift_keypoints": 1454.1666666666667,
+      "avg_edge_density": 0.07362411956880478
+    }
+  },
+  "problems_found": [],
+  "recommendations": [],
+  "detailed_results": [
+    {
+      "item_id": "extracted_item_1",
+      "claimed_type": "anchors",
+      "extracted_features": {
+        "sift_keypoints": 23870,
+        "edge_density": 0.09848561591497738,
+        "mean_intensity": 231.6133307653795,
+        "contour_count": 4734
+      },
+      "training_comparisons": {
+        "design_pressure": {
+          "max_similarity": 0.731816661401756,
+          "scores": [
+            {
+              "similarity": 0.6406946208858928,
+              "training_image": "design_pressure #2.png",
+              "training_features": {
+                "sift_keypoints": 4206,
+                "edge_density": 0.15169085739937155,
+                "mean_intensity": 230.25984878713817
+              }
+            },
+            {
+              "similarity": 0.6850462885413378,
+              "training_image": "design_pressure #3.png",
+              "training_features": {
+                "sift_keypoints": 2207,
+                "edge_density": 0.13697844742552773,
+                "mean_intensity": 233.22095704280923
+              }
+            },
+            {
+              "similarity": 0.731816661401756,
+              "training_image": "design_pressure #1.png",
+              "training_features": {
+                "sift_keypoints": 3080,
+                "edge_density": 0.0985366865132261,
+                "mean_intensity": 238.23174560857845
+              }
+            },
+            {
+              "similarity": 0.660530473118678,
+              "training_image": "design_pressure #4.png",
+              "training_features": {
+                "sift_keypoints": 783,
+                "edge_density": 0.15761562178828367,
+                "mean_intensity": 226.18730729701952
+              }
+            },
+            {
+              "similarity": 0.6645998513752621,
+              "training_image": "design_pressure #5.png",
+              "training_features": {
+                "sift_keypoints": 1480,
+                "edge_density": 0.15204661410018552,
+                "mean_intensity": 229.09676484230056
+              }
+            }
+          ]
+        },
+        "glazing": {
+          "max_similarity": 0.6743035223714664,
+          "scores": [
+            {
+              "similarity": 0.6673941641603657,
+              "training_image": "glazing_detail #5.png",
+              "training_features": {
+                "sift_keypoints": 719,
+                "edge_density": 0.06820598120584402,
+                "mean_intensity": 244.3440265107346
+              }
+            },
+            {
+              "similarity": 0.6743035223714664,
+              "training_image": "glazing_detail #4.png",
+              "training_features": {
+                "sift_keypoints": 411,
+                "edge_density": 0.0701859351988218,
+                "mean_intensity": 243.63930565783014
+              }
+            },
+            {
+              "similarity": 0.6628595298723357,
+              "training_image": "glazing_detail #1.png",
+              "training_features": {
+                "sift_keypoints": 767,
+                "edge_density": 0.07323514929047853,
+                "mean_intensity": 242.9927313219034
+              }
+            },
+            {
+              "similarity": 0.6637773445122321,
+              "training_image": "glazing_detail #3.png",
+              "training_features": {
+                "sift_keypoints": 2525,
+                "edge_density": 0.06881010757593035,
+                "mean_intensity": 240.24787128901053
+              }
+            },
+            {
+              "similarity": 0.6646219879040554,
+              "training_image": "glazing_detail #2.png",
+              "training_features": {
+                "sift_keypoints": 782,
+                "edge_density": 0.0719254131016916,
+                "mean_intensity": 243.40398515228702
+              }
+            }
+          ]
+        },
+        "impact_rating": {
+          "max_similarity": 0.6694286203767414,
+          "scores": [
+            {
+              "similarity": 0.6432867349628664,
+              "training_image": "impact_rating #1.png",
+              "training_features": {
+                "sift_keypoints": 318,
+                "edge_density": 0.15265848670756646,
+                "mean_intensity": 207.92019427402863
+              }
+            },
+            {
+              "similarity": 0.6263445732502458,
+              "training_image": "impact_rating #2.png",
+              "training_features": {
+                "sift_keypoints": 147,
+                "edge_density": 0.16656037414965985,
+                "mean_intensity": 204.359162414966
+              }
+            },
+            {
+              "similarity": 0.6694286203767414,
+              "training_image": "impact_rating #3.png",
+              "training_features": {
+                "sift_keypoints": 298,
+                "edge_density": 0.1366223908918406,
+                "mean_intensity": 213.2843137254902
+              }
+            }
+          ]
+        },
+        "anchors": {
+          "max_similarity": 0.7350162433541508,
+          "scores": [
+            {
+              "similarity": 0.6503943828394507,
+              "training_image": "anchor_detail #2.png",
+              "training_features": {
+                "sift_keypoints": 4227,
+                "edge_density": 0.0669097564019022,
+                "mean_intensity": 246.23704022072178
+              }
+            },
+            {
+              "similarity": 0.6451062632031725,
+              "training_image": "anchor_detail #3.png",
+              "training_features": {
+                "sift_keypoints": 1137,
+                "edge_density": 0.06234854418435951,
+                "mean_intensity": 246.63130857824714
+              }
+            },
+            {
+              "similarity": 0.7350162433541508,
+              "training_image": "anchor_detail #1.png",
+              "training_features": {
+                "sift_keypoints": 1684,
+                "edge_density": 0.09956924334606738,
+                "mean_intensity": 240.2538830983037
+              }
+            },
+            {
+              "similarity": 0.7013425524388854,
+              "training_image": "anchor_detail #4.png",
+              "training_features": {
+                "sift_keypoints": 290,
+                "edge_density": 0.08176898359546761,
+                "mean_intensity": 243.40057923220024
+              }
+            },
+            {
+              "similarity": 0.6518055753695494,
+              "training_image": "anchor_detail #5.png",
+              "training_features": {
+                "sift_keypoints": 348,
+                "edge_density": 0.06587012987012987,
+                "mean_intensity": 245.31803246753248
+              }
+            },
+            {
+              "similarity": 0.6523648464486612,
+              "training_image": "anchor_detail #6.png",
+              "training_features": {
+                "sift_keypoints": 1039,
+                "edge_density": 0.06527806001490212,
+                "mean_intensity": 245.20372044977307
+              }
+            }
+          ]
+        }
+      },
+      "best_match": {
+        "category": "anchors",
+        "score": 0.7350162433541508,
+        "filename": "anchor_detail #1.png"
+      }
+    },
+    {
+      "item_id": "extracted_item_2",
+      "claimed_type": "anchors",
+      "extracted_features": {
+        "sift_keypoints": 2274,
+        "edge_density": 0.0758931157471388,
+        "mean_intensity": 235.22818965969057,
+        "contour_count": 439
+      },
+      "training_comparisons": {
+        "design_pressure": {
+          "max_similarity": 0.6775990302305732,
+          "scores": [
+            {
+              "similarity": 0.6020075739417019,
+              "training_image": "design_pressure #2.png",
+              "training_features": {
+                "sift_keypoints": 4206,
+                "edge_density": 0.15169085739937155,
+                "mean_intensity": 230.25984878713817
+              }
+            },
+            {
+              "similarity": 0.6446724090102487,
+              "training_image": "design_pressure #3.png",
+              "training_features": {
+                "sift_keypoints": 2207,
+                "edge_density": 0.13697844742552773,
+                "mean_intensity": 233.22095704280923
+              }
+            },
+            {
+              "similarity": 0.6775990302305732,
+              "training_image": "design_pressure #1.png",
+              "training_features": {
+                "sift_keypoints": 3080,
+                "edge_density": 0.0985366865132261,
+                "mean_intensity": 238.23174560857845
+              }
+            },
+            {
+              "similarity": 0.6215778907784875,
+              "training_image": "design_pressure #4.png",
+              "training_features": {
+                "sift_keypoints": 783,
+                "edge_density": 0.15761562178828367,
+                "mean_intensity": 226.18730729701952
+              }
+            },
+            {
+              "similarity": 0.6254824936320533,
+              "training_image": "design_pressure #5.png",
+              "training_features": {
+                "sift_keypoints": 1480,
+                "edge_density": 0.15204661410018552,
+                "mean_intensity": 229.09676484230056
+              }
+            }
+          ]
+        },
+        "glazing": {
+          "max_similarity": 0.7306332538014231,
+          "scores": [
+            {
+              "similarity": 0.7202073227164614,
+              "training_image": "glazing_detail #5.png",
+              "training_features": {
+                "sift_keypoints": 719,
+                "edge_density": 0.06820598120584402,
+                "mean_intensity": 244.3440265107346
+              }
+            },
+            {
+              "similarity": 0.7306332538014231,
+              "training_image": "glazing_detail #4.png",
+              "training_features": {
+                "sift_keypoints": 411,
+                "edge_density": 0.0701859351988218,
+                "mean_intensity": 243.63930565783014
+              }
+            },
+            {
+              "similarity": 0.7227986689461515,
+              "training_image": "glazing_detail #1.png",
+              "training_features": {
+                "sift_keypoints": 767,
+                "edge_density": 0.07323514929047853,
+                "mean_intensity": 242.9927313219034
+              }
+            },
+            {
+              "similarity": 0.7181655529629333,
+              "training_image": "glazing_detail #3.png",
+              "training_features": {
+                "sift_keypoints": 2525,
+                "edge_density": 0.06881010757593035,
+                "mean_intensity": 240.24787128901053
+              }
+            },
+            {
+              "similarity": 0.7216952010994877,
+              "training_image": "glazing_detail #2.png",
+              "training_features": {
+                "sift_keypoints": 782,
+                "edge_density": 0.0719254131016916,
+                "mean_intensity": 243.40398515228702
+              }
+            }
+          ]
+        },
+        "impact_rating": {
+          "max_similarity": 0.6268671226074547,
+          "scores": [
+            {
+              "similarity": 0.6032421363316443,
+              "training_image": "impact_rating #1.png",
+              "training_features": {
+                "sift_keypoints": 318,
+                "edge_density": 0.15265848670756646,
+                "mean_intensity": 207.92019427402863
+              }
+            },
+            {
+              "similarity": 0.5919538736242419,
+              "training_image": "impact_rating #2.png",
+              "training_features": {
+                "sift_keypoints": 147,
+                "edge_density": 0.16656037414965985,
+                "mean_intensity": 204.359162414966
+              }
+            },
+            {
+              "similarity": 0.6268671226074547,
+              "training_image": "impact_rating #3.png",
+              "training_features": {
+                "sift_keypoints": 298,
+                "edge_density": 0.1366223908918406,
+                "mean_intensity": 213.2843137254902
+              }
+            }
+          ]
+        },
+        "anchors": {
+          "max_similarity": 0.7309583092262542,
+          "scores": [
+            {
+              "similarity": 0.7030984986061003,
+              "training_image": "anchor_detail #2.png",
+              "training_features": {
+                "sift_keypoints": 4227,
+                "edge_density": 0.0669097564019022,
+                "mean_intensity": 246.23704022072178
+              }
+            },
+            {
+              "similarity": 0.6921643367393306,
+              "training_image": "anchor_detail #3.png",
+              "training_features": {
+                "sift_keypoints": 1137,
+                "edge_density": 0.06234854418435951,
+                "mean_intensity": 246.63130857824714
+              }
+            },
+            {
+              "similarity": 0.6813379638843005,
+              "training_image": "anchor_detail #1.png",
+              "training_features": {
+                "sift_keypoints": 1684,
+                "edge_density": 0.09956924334606738,
+                "mean_intensity": 240.2538830983037
+              }
+            },
+            {
+              "similarity": 0.7309583092262542,
+              "training_image": "anchor_detail #4.png",
+              "training_features": {
+                "sift_keypoints": 290,
+                "edge_density": 0.08176898359546761,
+                "mean_intensity": 243.40057923220024
+              }
+            },
+            {
+              "similarity": 0.7046618971137327,
+              "training_image": "anchor_detail #5.png",
+              "training_features": {
+                "sift_keypoints": 348,
+                "edge_density": 0.06587012987012987,
+                "mean_intensity": 245.31803246753248
+              }
+            },
+            {
+              "similarity": 0.7061084254136363,
+              "training_image": "anchor_detail #6.png",
+              "training_features": {
+                "sift_keypoints": 1039,
+                "edge_density": 0.06527806001490212,
+                "mean_intensity": 245.20372044977307
+              }
+            }
+          ]
+        }
+      },
+      "best_match": {
+        "category": "anchors",
+        "score": 0.7309583092262542,
+        "filename": "anchor_detail #4.png"
+      }
+    }
+  ]
+}

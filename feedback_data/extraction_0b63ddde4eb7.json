@@ -1,0 +1,18 @@
+{
+  "document_id": "0b63ddde4eb7",
+  "document_path": "document.pdf",
+  "target_characteristic": "glazing",
+  "extracted_sections": [],
+  "processing_time": 2.265974760055542,
+  "timestamp": "2025-09-20T23:14:10.648009",
+  "total_sections": 0,
+  "pages_processed": 9,
+  "processing_method": "characteristic_based_extraction",
+  "extraction_summary": {
+    "total_items": 0,
+    "diagram_items": 0,
+    "table_items": 0,
+    "avg_confidence": 0,
+    "pages_with_content": []
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "min_diagram_size": 300,
+  "max_text_ratio": 0.3,
+  "edge_density_threshold": 0.05,
+  "visual_similarity_threshold": 0.3,
+  "sift_min_matches": 8,
+  "skip_text_heavy_regions": true,
+  "require_visual_content": true,
+  "max_extractions_per_page": 3,
+  "skip_pages": 2
+}

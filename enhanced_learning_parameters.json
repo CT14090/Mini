@@ -1,0 +1,18 @@
+{
+  "similarity_threshold": 0.7,
+  "confidence_threshold": 0.5,
+  "diagram_score_threshold": 0.6,
+  "text_density_max": 0.3,
+  "line_density_min": 0.1,
+  "geometric_complexity_min": 0.4,
+  "min_image_size": 200,
+  "max_images_per_category": 25,
+  "aspect_ratio_min": 0.2,
+  "aspect_ratio_max": 5.0,
+  "reference_match_threshold": 0.4,
+  "feature_match_min_ratio": 0.6,
+  "edge_detection_threshold": 30.0,
+  "contour_min_area": 8000,
+  "morphological_iterations": 3,
+  "noise_reduction_kernel": 3
+}

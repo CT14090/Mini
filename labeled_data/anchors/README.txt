@@ -1,19 +1,35 @@
-TRAINING DATA: Anchors
+Category: Anchors
 
-DESCRIPTION:
-Reference images and descriptions for anchors identification
+Description: Anchor details, attachment methods, and fastening systems
 
-INSTRUCTIONS:
-1. Add high-quality reference images (JPG or PNG) to this folder
-2. Images should be clear examples of anchors content
-3. Minimum recommended size: 200x200 pixels
-4. Create descriptions.json file with reference descriptions
-5. The system will use these references to identify similar content
+CRITICAL GUIDELINES FOR ANCHORS:
+✅ Use CLEAR TECHNICAL DIAGRAMS only
+✅ Avoid text-heavy images or paragraphs
+✅ Include various styles and scales  
+✅ Minimum size: 300x300 pixels
+✅ Focus on visual/graphical content
 
-EXAMPLES NEEDED:
-- Clear, high-contrast images
-- Different variations and styles  
-- Representative of content you want to extract
-- Good quality scans or digital images
+Specific for anchors:
 
-The more quality examples you provide, the better the system will perform!
+- Anchor attachment details and fastener diagrams
+- Bolt patterns and connection details
+- Fastening system assemblies
+- Detail callouts showing anchor installations
+
+Examples that work well:
+- CAD drawings and technical illustrations
+- Cross-sectional details and assembly diagrams
+- Performance charts and specification diagrams
+- Clear, professional technical drawings
+
+Examples to AVOID:
+- Text paragraphs or specifications
+- Blurry or low-quality images
+- Screenshots with mostly text
+- Images without clear technical content
+
+The enhanced system specifically detects:
+- Technical lines and precise geometry
+- Construction-specific patterns
+- Diagram vs text content
+- Professional technical drawing elements

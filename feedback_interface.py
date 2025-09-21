@@ -1,608 +1,472 @@
 #!/usr/bin/env python3
+# feedback_interface.py
 """
-Complete Fixed Streamlit Interface for Window Characteristic Extractions
+Streamlit Interface for Construction Document Analysis - FIXED VERSION
+Simplified and reliable interface for viewing results
 """
+
 import streamlit as st
 import json
 import os
 import pathlib
-import base64
-import re
 from datetime import datetime
-from typing import Dict, List, Optional
 import pandas as pd
+import base64
+from PIL import Image
+import io
 
-# Optional plotly import
-PLOTLY_AVAILABLE = False
-try:
-    import plotly.express as px
-    import plotly.graph_objects as go
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    pass
-
-# Page configuration
+# Page config
 st.set_page_config(
-    page_title="Window Characteristic Analysis",
-    page_icon="🪟",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Construction Document Agent - Results",
+    page_icon="🎯",
+    layout="wide"
 )
 
-def clean_extracted_text(text: str) -> str:
-    """Clean up garbled extracted text"""
-    if not text:
-        return ""
-    
-    # Remove GLYPH patterns
-    text = re.sub(r'GLYPH<[^>]*>', '', text)
-    
-    # Remove font references
-    text = re.sub(r'font=/[A-Z\-+]+', '', text)
-    
-    # Remove excessive whitespace
-    text = re.sub(r'\s+', ' ', text)
-    
-    # Remove control characters
-    text = re.sub(r'[^\x20-\x7E]', ' ', text)
-    
-    # Clean up common OCR errors
-    text = text.replace('GLYPH', ' ')
-    text = text.replace('DVGLYPH', ' ')
-    
-    # Remove patterns like "c=3," or "c=17,"
-    text = re.sub(r'c=\d+,', '', text)
-    
-    return text.strip()
-
-def clean_table_content(content: str) -> str:
-    """Clean up table content for better display"""
-    if not content:
-        return ""
-    
-    # Basic cleaning
-    content = clean_extracted_text(content)
-    
-    # Preserve table structure but clean up
-    lines = content.split('\n')
-    cleaned_lines = []
-    
-    for line in lines:
-        line = line.strip()
-        if line and not line.startswith('|--'):  # Keep content, remove separator lines
-            cleaned_lines.append(line)
-    
-    return '\n'.join(cleaned_lines)
-
-def load_extraction_files() -> Dict[str, List[Dict]]:
-    """Load all extraction files organized by characteristic"""
-    extraction_files = {}
+@st.cache_data
+def load_extraction_files():
+    """Load all extraction files (cached)"""
     feedback_dir = pathlib.Path("feedback_data")
-    
     if not feedback_dir.exists():
-        return extraction_files
+        return []
     
-    characteristics = ['anchors', 'glazing', 'impact_rating', 'design_pressure']
+    extraction_files = []
+    for file in feedback_dir.glob("extraction_*.json"):
+        try:
+            with open(file) as f:
+                data = json.load(f)
+                data['filename'] = file.name
+                extraction_files.append(data)
+        except Exception as e:
+            st.warning(f"Error loading {file.name}: {e}")
     
-    for characteristic in characteristics:
-        char_files = []
-        pattern = f"{characteristic}_extraction_*.json"
-        
-        for file_path in feedback_dir.glob(pattern):
-            try:
-                with open(file_path) as f:
-                    data = json.load(f)
-                    data['file_path'] = str(file_path)
-                    data['file_name'] = file_path.name
-                    char_files.append(data)
-            except Exception as e:
-                st.error(f"Error loading {file_path.name}: {str(e)[:100]}")
-        
-        char_files.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
-        extraction_files[characteristic] = char_files
-    
+    # Sort by timestamp (newest first)
+    extraction_files.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
     return extraction_files
 
-def load_feedback_logs() -> Dict[str, List[Dict]]:
-    """Load feedback logs for each characteristic"""
-    feedback_logs = {}
-    characteristics = ['anchors', 'glazing', 'impact_rating', 'design_pressure']
-    
-    for characteristic in characteristics:
-        log_file = f"feedback_log_{characteristic}.json"
-        if os.path.exists(log_file):
-            try:
-                with open(log_file) as f:
-                    feedback_logs[characteristic] = json.load(f)
-            except Exception:
-                feedback_logs[characteristic] = []
-        else:
-            feedback_logs[characteristic] = []
-    
-    return feedback_logs
-
-def check_azure_openai_status() -> bool:
-    """Check if Azure OpenAI is configured properly"""
+@st.cache_data
+def load_feedback_logs():
+    """Load feedback analysis logs (cached)"""
     try:
-        # Force reload environment variables
-        from dotenv import load_dotenv
-        load_dotenv(override=True)
-    except:
-        pass
-    
-    required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
-    
-    # Check if all variables exist and are not empty
-    for var in required_vars:
-        value = os.getenv(var)
-        if not value or len(str(value).strip()) == 0:
-            return False
-    
-    # Try to import and test connection
-    try:
-        from langchain_openai import AzureChatOpenAI
-        from langchain_core.messages import HumanMessage
-        
-        llm = AzureChatOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            api_version="2024-02-01",
-            temperature=0.1,
-            max_tokens=5
-        )
-        
-        # Quick test (don't actually call it in Streamlit to avoid costs)
-        return True
-        
-    except Exception:
-        return False
-
-def display_image_from_data_uri(data_uri: str, caption: str = "", width: int = 300):
-    """Display image from data URI"""
-    try:
-        if data_uri and data_uri.startswith('data:image'):
-            base64_data = data_uri.split(',')[1]
-            image_bytes = base64.b64decode(base64_data)
-            st.image(image_bytes, caption=caption, width=width)
-        else:
-            st.write("No image data available")
+        with open("feedback_log.json") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
     except Exception as e:
-        st.error(f"Error displaying image: {str(e)[:50]}")
+        st.warning(f"Error loading feedback log: {e}")
+        return []
 
-def display_all_images(items: List[Dict]):
-    """Display all extracted images"""
-    cols = st.columns(3)  # 3 images per row
-    
-    for i, item in enumerate(items):
-        with cols[i % 3]:
-            st.write(f"**Image {i+1}** - Page {item.get('page', 'Unknown')}")
-            st.write(f"Confidence: {item.get('confidence', 0):.3f}")
-            
-            data_uri = item.get('data_uri')
-            if data_uri:
-                display_image_from_data_uri(data_uri, width=200)
-            
-            # Show metadata
-            metadata = item.get('metadata', {})
-            if metadata.get('reference_name'):
-                st.write(f"Reference: {metadata.get('reference_name')}")
-            if metadata.get('extraction_method'):
-                st.write(f"Method: {metadata.get('extraction_method')}")
-            
-            st.write("---")
-
-def display_all_summaries(items: List[Dict]):
-    """Display all text summaries"""
-    for i, item in enumerate(items, 1):
-        with st.expander(f"Summary {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
-            content = item.get('content', '')
-            if content:
-                # Clean up garbled text
-                cleaned_content = clean_extracted_text(content)
-                if cleaned_content and len(cleaned_content.strip()) > 50:
-                    st.write(cleaned_content)
-                else:
-                    st.warning("Text summary appears to be corrupted or too short")
-                    st.text(content[:200] + "..." if len(content) > 200 else content)
-            
-            # Show metadata
-            metadata = item.get('metadata', {})
-            if metadata:
-                st.write("**Extraction Details:**")
-                st.write(f"- Keyword matches: {metadata.get('keyword_matches', 0)}")
-                st.write(f"- Source pages: {metadata.get('source_pages', [])}")
-                st.write(f"- Extraction method: {metadata.get('extraction_method', 'Unknown')}")
-
-def display_all_tables(items: List[Dict]):
-    """Display all extracted tables"""
-    for i, item in enumerate(items, 1):
-        with st.expander(f"Table {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
-            content = item.get('content', '')
-            if content:
-                # Clean table content
-                cleaned_content = clean_table_content(content)
-                st.text(cleaned_content)
-            
-            # Show metadata
-            metadata = item.get('metadata', {})
-            if metadata:
-                st.write("**Table Analysis:**")
-                st.write(f"- Relevance score: {metadata.get('relevance_score', 0):.1f}")
-                
-                table_analysis = metadata.get('table_analysis', {})
-                if table_analysis:
-                    data_points = table_analysis.get('data_points_found', [])
-                    if data_points:
-                        st.write(f"- Data points found: {', '.join(data_points)}")
-                    st.write(f"- Table type: {table_analysis.get('table_type', 'Unknown')}")
-
-def display_all_other_content(items: List[Dict]):
-    """Display other content types"""
-    for i, item in enumerate(items, 1):
-        with st.expander(f"Item {i} - Page {item.get('page', 'Unknown')} (Confidence: {item.get('confidence', 0):.3f})"):
-            content = item.get('content', '')
-            if content:
-                cleaned_content = clean_extracted_text(content)
-                if cleaned_content:
-                    st.write(cleaned_content)
-                else:
-                    st.text(content)
-            
-            metadata = item.get('metadata', {})
-            if metadata:
-                st.write("**Metadata:**")
-                for key, value in metadata.items():
-                    if isinstance(value, (str, int, float)) and key != 'bbox':
-                        st.write(f"- {key}: {value}")
-
-def display_content_breakdown(sections: List[Dict]):
-    """Display all extracted content organized by type"""
-    # Group by type
-    content_types = {}
-    for section in sections:
-        section_type = section.get('type', 'unknown')
-        clean_type = section_type.replace('_', ' ').title()
-        if clean_type not in content_types:
-            content_types[clean_type] = []
-        content_types[clean_type].append(section)
-    
-    # Show all content types
-    for content_type, items in content_types.items():
-        st.write(f"### {content_type} ({len(items)} items)")
+def display_extraction_overview(extractions):
+    """Display overview of all extractions"""
+    if not extractions:
+        st.info("🚀 No extraction files found. Process documents first!")
+        st.markdown("""
+        **To get started:**
         
-        if 'image' in content_type.lower():
-            display_all_images(items)
-        elif 'summary' in content_type.lower():
-            display_all_summaries(items)
-        elif 'table' in content_type.lower():
-            display_all_tables(items)
-        else:
-            display_all_other_content(items)
+        ```bash
+        # List available characteristics
+        python adaptive_agent.py --list-characteristics
         
-        st.write("---")
-
-def display_extraction_summary(extraction_files: Dict[str, List[Dict]]):
-    """Display extraction summary statistics"""
+        # Process a document
+        python adaptive_agent.py --source document.pdf --characteristic anchors
+        
+        # Or process all characteristics
+        python adaptive_agent.py --source document.pdf --all-characteristics
+        ```
+        """)
+        return []
+    
+    st.header("📊 Extraction Overview")
+    
+    # Summary metrics
     col1, col2, col3, col4 = st.columns(4)
     
-    total_docs = sum(len(files) for files in extraction_files.values())
-    total_items = 0
-    avg_confidence = 0
-    
-    for char_files in extraction_files.values():
-        for file_data in char_files:
-            sections = file_data.get('extracted_sections', [])
-            total_items += len(sections)
-            if sections:
-                avg_confidence += sum(item.get('confidence', 0) for item in sections) / len(sections)
-    
-    if total_docs > 0:
-        avg_confidence /= total_docs
-    
     with col1:
-        st.metric("Total Documents", total_docs)
+        st.metric("Total Documents", len(extractions))
+    
     with col2:
-        st.metric("Total Items", total_items)
+        total_sections = sum(ex.get('total_sections', 0) for ex in extractions)
+        st.metric("Total Items", total_sections)
+    
     with col3:
-        st.metric("Avg Confidence", f"{avg_confidence:.2f}")
+        # Show characteristics processed
+        characteristics = set()
+        for ex in extractions:
+            char = ex.get('target_characteristic', 'unknown')
+            if char != 'unknown':
+                characteristics.add(char)
+        st.metric("Characteristics", len(characteristics))
+    
     with col4:
-        azure_status = "Connected" if check_azure_openai_status() else "Missing"
-        st.metric("Azure OpenAI", azure_status)
+        if extractions:
+            avg_processing_time = sum(ex.get('processing_time', 0) for ex in extractions) / len(extractions)
+            st.metric("Avg Processing Time", f"{avg_processing_time:.1f}s")
+    
+    # Recent extractions table
+    st.subheader("📄 Recent Extractions")
+    
+    table_data = []
+    for extraction in extractions[:15]:  # Show last 15
+        doc_path = extraction.get('document_path', 'Unknown')
+        doc_name = os.path.basename(doc_path)
+        
+        timestamp = extraction.get('timestamp', 'Unknown')
+        if timestamp != 'Unknown':
+            try:
+                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                timestamp = dt.strftime('%m-%d %H:%M')
+            except:
+                timestamp = timestamp[:16]
+        
+        # Get characteristic info
+        target_char = extraction.get('target_characteristic', 'All')
+        char_display = target_char.replace('_', ' ').title() if target_char != 'All' else 'All'
+        
+        table_data.append({
+            'Document': doc_name[:30] + ('...' if len(doc_name) > 30 else ''),
+            'Characteristic': char_display,
+            'Time': timestamp,
+            'Items': extraction.get('total_sections', 0),
+            'ID': extraction.get('document_id', 'Unknown')[:8]
+        })
+    
+    if table_data:
+        df = pd.DataFrame(table_data)
+        st.dataframe(df, use_container_width=True)
+    
+    return extractions
 
-def display_recent_extractions(extraction_files: Dict[str, List[Dict]]):
-    """Display recent extractions in a clean table"""
-    recent_data = []
-    for characteristic, files in extraction_files.items():
-        for file_data in files[:2]:  # Top 2 per characteristic
-            recent_data.append({
-                'Characteristic': characteristic.replace('_', ' ').title(),
-                'Document': file_data.get('document_id', 'Unknown')[:8],
-                'Items': file_data.get('total_sections', 0),
-                'Date': file_data.get('timestamp', '')[:10],
-                'Time': f"{file_data.get('processing_time', 0):.1f}s"
-            })
+def display_extraction_details(extraction):
+    """Display detailed extraction results"""
+    st.header(f"🔍 Extraction Details")
     
-    if recent_data:
-        df = pd.DataFrame(recent_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
-    else:
-        st.info("No extractions found. Process some documents to get started.")
-
-def display_characteristic_page(characteristic: str, extraction_files: List[Dict], feedback_logs: List[Dict]):
-    """Display characteristic-specific page"""
-    char_title = characteristic.replace('_', ' ').title()
-    st.header(f"{char_title} Analysis")
-    
-    if not extraction_files:
-        st.info(f"No {char_title.lower()} extractions found.")
-        st.code(f"python adaptive_agent.py --source document.pdf --characteristics {characteristic}")
-        return
-    
-    # Document selector
-    doc_options = []
-    for i, f in enumerate(extraction_files):
-        doc_id = f.get('document_id', 'Unknown')[:8]
-        path = os.path.basename(f.get('document_path', 'Unknown'))
-        timestamp = f.get('timestamp', '')[:10]
-        doc_options.append(f"{doc_id} - {path} ({timestamp})")
-    
-    selected_idx = st.selectbox(
-        f"Select {char_title} Document:",
-        range(len(doc_options)),
-        format_func=lambda x: doc_options[x],
-        key=f"doc_selector_{characteristic}"
-    )
-    
-    if selected_idx is not None:
-        selected_doc = extraction_files[selected_idx]
-        display_document_analysis(characteristic, selected_doc, feedback_logs)
-
-def display_document_analysis(characteristic: str, doc_data: Dict, feedback_logs: List[Dict]):
-    """Display comprehensive document analysis"""
-    doc_id = doc_data.get('document_id', 'Unknown')
-    
-    # Find feedback for this document
-    doc_feedback = next((log for log in feedback_logs if log.get('document_id') == doc_id), None)
-    
-    # Document overview
-    st.subheader("Document Overview")
+    # Document info
     col1, col2 = st.columns(2)
     
     with col1:
-        st.write(f"**ID:** {doc_id}")
-        st.write(f"**Source:** {os.path.basename(doc_data.get('document_path', 'Unknown'))}")
-        st.write(f"**Pages:** {doc_data.get('total_pages', 'Unknown')}")
+        st.subheader("📄 Document Information")
+        doc_path = extraction.get('document_path', 'Unknown')
+        st.text(f"Document: {os.path.basename(doc_path)}")
+        st.text(f"Document ID: {extraction.get('document_id', 'Unknown')}")
+        st.text(f"Processing Time: {extraction.get('processing_time', 0):.1f}s")
+        
+        # Characteristic info
+        target_char = extraction.get('target_characteristic')
+        if target_char:
+            st.text(f"Target: {target_char.replace('_', ' ').title()}")
     
     with col2:
-        timestamp = doc_data.get('timestamp', '')
-        if timestamp:
-            formatted_time = datetime.fromisoformat(timestamp).strftime('%Y-%m-%d %H:%M')
-            st.write(f"**Processed:** {formatted_time}")
-        
-        st.write(f"**Items Extracted:** {doc_data.get('total_sections', 0)}")
-        processing_time = doc_data.get('processing_time', 0)
-        if processing_time:
-            st.write(f"**Processing Time:** {processing_time:.1f}s")
+        st.subheader("📊 Results Summary")
+        summary = extraction.get('extraction_summary', {})
+        st.text(f"Total Items: {summary.get('total_items', 0)}")
+        st.text(f"Diagrams: {summary.get('diagram_items', 0)}")
+        st.text(f"Tables: {summary.get('table_items', 0)}")
+        st.text(f"Avg Confidence: {summary.get('avg_confidence', 0):.2f}")
     
-    # AI Feedback Analysis
-    if doc_feedback:
-        st.subheader("AI Analysis Results")
-        display_ai_feedback(doc_feedback)
+    # Page distribution chart
+    summary = extraction.get('extraction_summary', {})
+    pages_with_content = summary.get('pages_with_content', [])
     
-    # Content breakdown
-    sections = doc_data.get('extracted_sections', [])
-    if sections:
-        st.subheader("Extracted Content")
-        display_content_breakdown(sections)
-    
-    # Text summary
-    text_summary = doc_data.get('text_summary', {})
-    if text_summary.get('summary'):
-        st.subheader("Text Summary")
+    if pages_with_content:
+        st.subheader("📄 Content Distribution")
         
-        summary_text = text_summary['summary']
-        cleaned_summary = clean_extracted_text(summary_text)
+        # Count items per page
+        sections = extraction.get('extracted_sections', [])
+        page_counts = {}
+        for section in sections:
+            page = section.get('page', 0)
+            page_counts[page] = page_counts.get(page, 0) + 1
         
-        col1, col2 = st.columns([3, 1])
-        with col2:
-            st.metric("Confidence", f"{text_summary.get('confidence', 0):.2f}")
-            st.write(f"**Source Pages:** {text_summary.get('source_pages', [])}")
-            st.write(f"**Sentences:** {text_summary.get('sentence_count', 0)}")
-            
-            # Additional metadata
-            if 'total_sentences_analyzed' in text_summary:
-                st.write(f"**Total Analyzed:** {text_summary.get('total_sentences_analyzed', 0)}")
-            if 'relevant_sentences_found' in text_summary:
-                st.write(f"**Relevant Found:** {text_summary.get('relevant_sentences_found', 0)}")
-        
-        with col1:
-            if cleaned_summary and len(cleaned_summary.strip()) > 50:
-                # Split into sentences for better readability
-                sentences = cleaned_summary.split('. ')
-                for i, sentence in enumerate(sentences[:5], 1):  # Show first 5 sentences clearly
-                    if sentence.strip():
-                        st.write(f"**{i}.** {sentence.strip()}.")
-                
-                if len(sentences) > 5:
-                    with st.expander(f"Show remaining {len(sentences) - 5} sentences"):
-                        for i, sentence in enumerate(sentences[5:], 6):
-                            if sentence.strip():
-                                st.write(f"**{i}.** {sentence.strip()}.")
-            else:
-                st.warning("Text summary appears to contain extraction errors")
-                st.text(summary_text[:300] + "..." if len(summary_text) > 300 else summary_text)
+        if page_counts:
+            chart_data = pd.DataFrame([
+                {'Page': f"Page {page}", 'Items': count} 
+                for page, count in sorted(page_counts.items())
+            ])
+            st.bar_chart(chart_data.set_index('Page'))
 
-def display_ai_feedback(feedback: Dict):
-    """Display AI feedback in a clean format"""
-    quality_scores = feedback.get('quality_scores', {})
+def display_extracted_content(extraction):
+    """Display extracted content with filtering"""
+    st.header("📋 Extracted Content")
     
-    if quality_scores:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Content Relevance", f"{quality_scores.get('content_relevance', 0)}/5")
-        with col2:
-            st.metric("Extraction Quality", f"{quality_scores.get('extraction_quality', 0)}/5")
-        with col3:
-            st.metric("Reference Alignment", f"{quality_scores.get('reference_alignment', 0)}/5")
-    
-    # Parameter changes
-    param_changes = feedback.get('parameter_changes', [])
-    if param_changes:
-        st.write("**Parameter Updates Applied:**")
-        for change in param_changes[:3]:  # Show top 3
-            st.write(f"• {change}")
-    
-    # AI reasoning (condensed)
-    reasoning = feedback.get('reasoning', '')
-    if reasoning and len(reasoning) > 0:
-        with st.expander("AI Analysis Details"):
-            st.write(reasoning[:300] + "..." if len(reasoning) > 300 else reasoning)
-
-def display_analytics_page(extraction_files: Dict[str, List[Dict]], feedback_logs: Dict[str, List[Dict]]):
-    """Display analytics and trends"""
-    st.header("Analytics Dashboard")
-    
-    # Performance summary
-    st.subheader("Performance Summary")
-    perf_data = []
-    for characteristic, files in extraction_files.items():
-        if files:
-            total_items = sum(len(f.get('extracted_sections', [])) for f in files)
-            total_docs = len(files)
-            avg_items = total_items / total_docs if total_docs > 0 else 0
-            
-            perf_data.append({
-                'Characteristic': characteristic.replace('_', ' ').title(),
-                'Documents': total_docs,
-                'Total Items': total_items,
-                'Avg Items/Doc': f"{avg_items:.1f}"
-            })
-    
-    if perf_data:
-        df = pd.DataFrame(perf_data)
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    sections = extraction.get('extracted_sections', [])
+    if not sections:
+        st.info("No content was extracted from this document.")
         
-        if PLOTLY_AVAILABLE:
-            col1, col2 = st.columns(2)
+        target_char = extraction.get('target_characteristic', 'unknown')
+        st.markdown(f"""
+        **Possible reasons:**
+        
+        1. No {target_char.replace('_', ' ')} content found in document
+        2. Quality thresholds too strict
+        3. Need more training data in `labeled_data/{target_char}/`
+        4. Document quality issues
+        
+        **Next steps:**
+        ```bash
+        # Add training examples
+        python adaptive_agent.py --setup-labeled-data
+        
+        # Process with debug
+        python adaptive_agent.py --source document.pdf --characteristic {target_char} --debug
+        ```
+        """)
+        return
+    
+    # Simple filtering
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Content type filter
+        content_types = sorted(set(section.get('type', 'unknown') for section in sections))
+        selected_types = st.multiselect(
+            "Content Types",
+            content_types,
+            default=content_types
+        )
+    
+    with col2:
+        # Confidence filter
+        min_confidence = st.slider(
+            "Min Confidence",
+            0.0, 1.0, 0.0, 0.1
+        )
+    
+    # Apply filters
+    filtered_sections = [
+        section for section in sections
+        if (section.get('type', 'unknown') in selected_types and
+            section.get('confidence', 0) >= min_confidence)
+    ]
+    
+    st.text(f"Showing {len(filtered_sections)} of {len(sections)} items")
+    
+    # Display content
+    for i, section in enumerate(filtered_sections[:10]):  # Limit display
+        type_display = section.get('type', 'unknown').replace('_', ' ').title()
+        confidence = section.get('confidence', 0)
+        page = section.get('page', 'Unknown')
+        
+        with st.expander(
+            f"📄 {type_display} (Page {page}, Confidence: {confidence:.2f})",
+            expanded=(i < 2)  # Expand first 2
+        ):
+            col1, col2 = st.columns([3, 1])
+            
             with col1:
-                fig1 = px.bar(df, x='Characteristic', y='Total Items', 
-                             title='Items Extracted by Characteristic')
-                st.plotly_chart(fig1, use_container_width=True)
+                # Content
+                content = section.get('content', 'No content available')
+                if len(content) > 1000:
+                    st.text(content[:1000] + "\n... (truncated)")
+                    if st.button(f"Show full content {i+1}"):
+                        st.text(content)
+                else:
+                    st.text(content)
+                
+                # Basic metadata
+                metadata = section.get('region_metadata', {})
+                if metadata:
+                    method = metadata.get('extraction_method', 'Unknown')
+                    area = metadata.get('area', 0)
+                    st.caption(f"Method: {method}, Area: {area:,} pixels")
             
             with col2:
-                fig2 = px.pie(df, values='Documents', names='Characteristic',
-                             title='Documents by Characteristic')
-                st.plotly_chart(fig2, use_container_width=True)
+                # Image if available
+                if 'data_uri' in section and section['data_uri']:
+                    try:
+                        header, encoded = section['data_uri'].split(',', 1)
+                        decoded = base64.b64decode(encoded)
+                        image = Image.open(io.BytesIO(decoded))
+                        st.image(image, caption=f"{type_display}", width=200)
+                    except Exception as e:
+                        st.error(f"Image error: {e}")
+
+def display_system_status():
+    """Display system status"""
+    st.header("🎯 System Status")
     
-    # Recent parameter changes
-    st.subheader("Recent Parameter Changes")
-    all_changes = []
-    for characteristic, logs in feedback_logs.items():
-        for log in logs[-3:]:  # Last 3 per characteristic
-            changes = log.get('parameter_changes', [])
-            for change in changes:
-                all_changes.append({
-                    'Characteristic': characteristic.replace('_', ' ').title(),
-                    'Date': log.get('timestamp', '')[:10],
-                    'Change': change
-                })
+    # Check files
+    col1, col2 = st.columns(2)
     
-    if all_changes:
-        changes_df = pd.DataFrame(all_changes)
-        st.dataframe(changes_df.tail(8), use_container_width=True, hide_index=True)
+    with col1:
+        st.subheader("📁 Core Files")
+        files_to_check = [
+            "adaptive_agent.py",
+            "characteristic_based_extractor.py", 
+            "llm_feedback.py",
+            "diagnostic.py"
+        ]
+        
+        for file_path in files_to_check:
+            if os.path.exists(file_path):
+                st.success(f"✅ {file_path}")
+            else:
+                st.error(f"❌ {file_path}")
+    
+    with col2:
+        st.subheader("📚 Training Data")
+        labeled_path = pathlib.Path("labeled_data")
+        
+        if labeled_path.exists():
+            categories = [d for d in labeled_path.iterdir() if d.is_dir()]
+            total_images = 0
+            
+            for cat_dir in categories:
+                images = list(cat_dir.glob("*.jpg")) + list(cat_dir.glob("*.png"))
+                total_images += len(images)
+                
+                if len(images) > 0:
+                    st.success(f"✅ {cat_dir.name}: {len(images)} images")
+                else:
+                    st.warning(f"⚠️ {cat_dir.name}: No images")
+            
+            st.metric("Total Training Images", total_images)
+        else:
+            st.error("❌ No labeled_data directory")
+            st.info("Run: `python adaptive_agent.py --setup-labeled-data`")
+    
+    # Check configuration
+    st.subheader("⚙️ Configuration")
+    
+    # Check Azure OpenAI
+    required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
+    missing_vars = [var for var in required_vars if not os.getenv(var)]
+    
+    if not missing_vars:
+        st.success("✅ Azure OpenAI configured")
     else:
-        st.info("No parameter changes recorded yet.")
+        st.warning(f"⚠️ Azure OpenAI missing: {missing_vars}")
+    
+    # Check parameters
+    if os.path.exists("learning_parameters.json"):
+        st.success("✅ Learning parameters file exists")
+        try:
+            with open("learning_parameters.json") as f:
+                params = json.load(f)
+            st.json(params)
+        except Exception as e:
+            st.error(f"Error loading parameters: {e}")
+    else:
+        st.info("ℹ️ No learning parameters file (will be created automatically)")
+
+def display_feedback_logs():
+    """Display feedback analysis logs"""
+    st.header("🤖 Feedback Analysis Logs")
+    
+    logs = load_feedback_logs()
+    
+    if not logs:
+        st.info("No feedback logs found.")
+        st.markdown("""
+        Feedback logs are created when Azure OpenAI analyzes extractions.
+        
+        **To generate feedback:**
+        ```bash
+        python llm_feedback.py --analyze-and-apply document_id
+        ```
+        """)
+        return
+    
+    st.text(f"Total log entries: {len(logs)}")
+    
+    # Show recent logs
+    for i, log in enumerate(logs[-5:]):  # Show last 5
+        timestamp = log.get('timestamp', 'Unknown')
+        doc_id = log.get('document_id', 'Unknown')
+        method = log.get('analysis_method', 'Unknown')
+        
+        with st.expander(f"📄 {doc_id} - {timestamp[:16]}"):
+            st.text(f"Method: {method}")
+            
+            # Show vision analysis if available
+            if 'vision_analysis_summary' in log:
+                summary = log['vision_analysis_summary']
+                accuracy = summary.get('accuracy_rate', 0)
+                analyzed = summary.get('total_items_analyzed', 0)
+                correct = summary.get('correct_classifications', 0)
+                
+                st.metric("Accuracy", f"{accuracy:.1%}")
+                st.text(f"Analyzed: {analyzed} items")
+                st.text(f"Correct: {correct} items")
+            
+            # Show parameter recommendations
+            if 'parameter_recommendations' in log:
+                recommendations = log['parameter_recommendations']
+                reasoning = recommendations.get('reasoning', 'No reasoning provided')
+                adjustments = recommendations.get('adjustments', {})
+                
+                st.text(f"Reasoning: {reasoning}")
+                if adjustments:
+                    st.json(adjustments)
 
 def main():
-    """Main Streamlit application"""
-    st.title("Window Characteristic Analysis")
-    st.markdown("AI-powered document analysis for window construction specifications")
-    
-    # Load data
-    try:
-        extraction_files = load_extraction_files()
-        feedback_logs = load_feedback_logs()
-    except Exception as e:
-        st.error(f"Error loading data: {str(e)[:100]}")
-        return
-    
-    # Check for data
-    total_files = sum(len(files) for files in extraction_files.values())
-    
-    if total_files == 0:
-        st.warning("No extraction data found!")
-        
-        st.subheader("Getting Started")
-        st.write("1. **Setup reference data:**")
-        st.code("python adaptive_agent.py --setup-reference-data")
-        
-        st.write("2. **Process a document:**")
-        st.code("python adaptive_agent.py --source document.pdf")
-        
-        st.write("3. **Test Azure OpenAI (optional):**")
-        st.code("python llm_feedback.py --test-connection")
-        
-        return
+    st.title("🎯 Construction Document Analysis Results")
+    st.markdown("View extraction results and system status")
     
     # Sidebar navigation
     st.sidebar.title("Navigation")
-    
-    page_options = ["Overview", "Anchors", "Glazing", "Impact Rating", "Design Pressure", "Analytics"]
-    selected_page = st.sidebar.selectbox(
-        "Select Page:",
-        page_options,
-        key="main_page_selector"
+    page = st.sidebar.selectbox(
+        "Choose a view",
+        [
+            "📊 Overview", 
+            "🔍 Document Details", 
+            "📚 System Status",
+            "🤖 Feedback Logs"
+        ]
     )
     
-    # System status in sidebar
-    st.sidebar.subheader("System Status")
-    azure_connected = check_azure_openai_status()
-    st.sidebar.write(f"Azure OpenAI: {'✅' if azure_connected else '❌'}")
-    st.sidebar.write(f"Documents: {total_files}")
+    # Load data
+    extractions = load_extraction_files()
     
-    total_feedback = sum(len(logs) for logs in feedback_logs.values())
-    st.sidebar.write(f"AI Feedback: {total_feedback}")
+    if page == "📊 Overview":
+        display_extraction_overview(extractions)
     
-    # Reference data status
-    labeled_data_path = pathlib.Path("labeled_data")
-    if labeled_data_path.exists():
-        st.sidebar.subheader("Reference Data")
-        for char in ['anchors', 'glazing', 'impact_rating', 'design_pressure']:
-            char_path = labeled_data_path / char
-            if char_path.exists():
-                image_count = 0
-                for ext in ['*.jpg', '*.jpeg', '*.png']:
-                    image_count += len(list(char_path.glob(ext)))
-                st.sidebar.write(f"{char}: {image_count} images")
+    elif page == "🔍 Document Details":
+        if not extractions:
+            st.info("No extraction files found.")
+        else:
+            # Document selector
+            doc_options = []
+            for extraction in extractions:
+                doc_path = extraction.get('document_path', 'Unknown')
+                doc_name = os.path.basename(doc_path)
+                doc_id = extraction.get('document_id', 'Unknown')[:8]
+                target_char = extraction.get('target_characteristic', 'All')
+                char_display = target_char.replace('_', ' ').title() if target_char != 'All' else 'All'
+                
+                doc_options.append(f"{doc_name} - {char_display} ({doc_id})")
+            
+            selected_idx = st.selectbox(
+                "Select Document",
+                range(len(doc_options)),
+                format_func=lambda x: doc_options[x]
+            )
+            
+            if selected_idx is not None:
+                extraction = extractions[selected_idx]
+                display_extraction_details(extraction)
+                st.divider()
+                display_extracted_content(extraction)
     
-    # Main content
-    if selected_page == "Overview":
-        st.header("System Overview")
-        display_extraction_summary(extraction_files)
-        
-        st.subheader("Recent Extractions")
-        display_recent_extractions(extraction_files)
+    elif page == "📚 System Status":
+        display_system_status()
     
-    elif selected_page == "Anchors":
-        display_characteristic_page("anchors", extraction_files.get("anchors", []), feedback_logs.get("anchors", []))
+    elif page == "🤖 Feedback Logs":
+        display_feedback_logs()
     
-    elif selected_page == "Glazing":
-        display_characteristic_page("glazing", extraction_files.get("glazing", []), feedback_logs.get("glazing", []))
+    # Footer
+    st.sidebar.divider()
+    st.sidebar.markdown("""
+    **Quick Commands:**
+    ```bash
+    # Process document
+    python adaptive_agent.py --source doc.pdf --characteristic anchors
     
-    elif selected_page == "Impact Rating":
-        display_characteristic_page("impact_rating", extraction_files.get("impact_rating", []), feedback_logs.get("impact_rating", []))
+    # Run diagnostic
+    python diagnostic.py
     
-    elif selected_page == "Design Pressure":
-        display_characteristic_page("design_pressure", extraction_files.get("design_pressure", []), feedback_logs.get("design_pressure", []))
-    
-    elif selected_page == "Analytics":
-        display_analytics_page(extraction_files, feedback_logs)
-    
-    # Quick actions in sidebar
-    st.sidebar.subheader("Quick Actions")
-    if st.sidebar.button("Refresh Data", key="refresh_button"):
-        st.rerun()
+    # Test system
+    python adaptive_agent.py --test-system
+    ```
+    """)
 
 if __name__ == "__main__":
     main()
