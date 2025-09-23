@@ -1,0 +1,29 @@
+{
+  "document_id": "5ad6d5943ebf",
+  "document_path": "document.pdf",
+  "target_characteristic": "anchors",
+  "extracted_sections": [],
+  "processing_time": 3.237652063369751,
+  "timestamp": "2025-09-22T09:16:58.449745",
+  "total_sections": 0,
+  "pages_processed": 9,
+  "processing_method": "enhanced_visual_content_extraction",
+  "extraction_summary": {
+    "total_items": 0,
+    "visual_regions_analyzed": 0,
+    "avg_confidence": 0,
+    "high_confidence_items": 0,
+    "pages_with_content": [],
+    "content_type_breakdown": {},
+    "detection_method_breakdown": {},
+    "extraction_rate_per_page": 0.0
+  },
+  "visual_detection_metadata": {
+    "enhanced_detection_enabled": true,
+    "table_detection_used": false,
+    "diagram_detection_used": false,
+    "content_block_detection_used": false,
+    "pdf_dpi": 250,
+    "visual_feature_extraction_enabled": true
+  }
+}
