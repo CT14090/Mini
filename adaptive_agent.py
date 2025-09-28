@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # adaptive_agent.py
 """
-Enhanced Adaptive Agent - VISUAL CONTENT FOCUSED VERSION
-Properly extracts diagrams, tables, and technical drawings
+Azure OpenAI-First Adaptive Agent - REDESIGNED VERSION
+Intelligent document processing using Azure OpenAI Vision as the primary extraction engine
 """
 import json
 import os
@@ -26,17 +26,6 @@ except:
 def timeout_handler(signum, frame):
     raise TimeoutError('Processing timed out - possible infinite loop detected')
 
-# Computer Vision imports
-CV_AVAILABLE = False
-try:
-    import cv2
-    import numpy as np
-    from PIL import Image
-    CV_AVAILABLE = True
-    print("✓ Computer Vision available for enhanced image processing")
-except ImportError:
-    print("⚠ OpenCV/PIL not available - limited functionality")
-
 # PDF to image conversion
 PDF2IMAGE_AVAILABLE = False
 try:
@@ -46,27 +35,36 @@ try:
 except ImportError:
     print("⚠ pdf2image not available - install with: pip install pdf2image")
 
-# Try to import enhanced characteristic extractor
-CHARACTERISTIC_EXTRACTOR_AVAILABLE = False
+# Azure OpenAI imports
+AZURE_AVAILABLE = False
 try:
-    from characteristic_based_extractor import CharacteristicBasedExtractor
-    CHARACTERISTIC_EXTRACTOR_AVAILABLE = True
-    print("✓ Enhanced Characteristic-Based Extractor available")
+    from langchain_openai import AzureChatOpenAI
+    AZURE_AVAILABLE = True
+    print("✓ Azure OpenAI available for vision analysis")
 except ImportError:
-    print("⚠ Enhanced characteristic extractor not available")
+    print("⚠ Azure OpenAI not available - limited functionality")
 
-class EnhancedDocumentProcessor:
-    """Enhanced processor with visual content focus and timeout protection"""
+# Try to import Azure-first extractor
+EXTRACTOR_AVAILABLE = False
+try:
+    from characteristic_based_extractor import AzureFirstExtractor
+    EXTRACTOR_AVAILABLE = True
+    print("✓ Azure-First Extractor available")
+except ImportError:
+    print("⚠ Azure-First extractor not available")
+
+class AzureFirstDocumentProcessor:
+    """Azure OpenAI-first document processor with integrated vision analysis"""
     
     def __init__(self):
         self.processing_timeout = 300  # 5 minutes max per characteristic
-        self.max_pages_to_process = 25  # Increased for better coverage
+        self.max_pages_to_process = 20  # Reasonable limit for Azure API costs
         self.extractor = None
         
-        if CHARACTERISTIC_EXTRACTOR_AVAILABLE:
+        if EXTRACTOR_AVAILABLE:
             try:
-                self.extractor = CharacteristicBasedExtractor()
-                print("✓ Enhanced characteristic extractor initialized")
+                self.extractor = AzureFirstExtractor()
+                print("✓ Azure-First extractor initialized")
             except Exception as e:
                 print(f"⚠ Error initializing extractor: {e}")
         
@@ -77,9 +75,8 @@ class EnhancedDocumentProcessor:
         if not PDF2IMAGE_AVAILABLE:
             raise RuntimeError("pdf2image is required. Install with: pip install pdf2image")
         
-        if not CV_AVAILABLE:
-            print("⚠ Limited functionality without OpenCV")
-            raise RuntimeError("OpenCV is required for visual content detection. Install with: pip install opencv-python")
+        if not AZURE_AVAILABLE:
+            print("⚠ Azure OpenAI not available - using fallback methods")
         
         # Check Azure OpenAI config
         required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
@@ -87,12 +84,12 @@ class EnhancedDocumentProcessor:
         
         if missing_vars:
             print(f"⚠ Azure OpenAI missing: {missing_vars}")
-            print("  Will use enhanced fallback analysis")
+            print("  Will use fallback analysis methods")
         else:
-            print("✓ Azure OpenAI configured for vision feedback")
+            print("✓ Azure OpenAI configured for intelligent vision analysis")
     
     def process_document_for_characteristic(self, source: str, characteristic: str, debug: bool = False) -> str:
-        """Process document for specific characteristic with enhanced visual detection"""
+        """Process document using Azure OpenAI Vision as primary method"""
         # Set timeout alarm
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(self.processing_timeout)
@@ -102,37 +99,37 @@ class EnhancedDocumentProcessor:
             doc_id = hashlib.md5(f"{source}_{characteristic}_{datetime.now().isoformat()}".encode()).hexdigest()[:12]
             
             print(f"\n{'='*80}")
-            print(f"🎯 ENHANCED VISUAL CONTENT EXTRACTION")
+            print(f"🎯 AZURE OPENAI-FIRST CONTENT EXTRACTION")
             print(f"{'='*80}")
             print(f"📄 Source: {os.path.basename(source)}")
             print(f"🏗️ Target Characteristic: {characteristic.replace('_', ' ').title()}")
             print(f"🆔 Document ID: {doc_id}")
             print(f"⏰ Timeout: {self.processing_timeout}s")
-            print(f"🔍 Detection: Tables, Diagrams, Visual Content")
+            print(f"🤖 Method: Azure OpenAI Vision Analysis")
             print(f"{'='*80}")
             
             if not self.extractor:
-                raise RuntimeError("Enhanced characteristic extractor not available")
+                raise RuntimeError("Azure-First extractor not available")
             
-            # Step 1: Convert PDF to images with enhanced settings
-            print(f"\n📖 STEP 1: CONVERTING PDF TO HIGH-QUALITY IMAGES")
+            # Step 1: Convert PDF to images (optimized for Azure analysis)
+            print(f"\n📖 STEP 1: CONVERTING PDF FOR AZURE ANALYSIS")
             print("─" * 50)
-            pdf_images = self._convert_pdf_to_images_enhanced(source, debug)
+            pdf_images = self._convert_pdf_for_azure(source, debug)
             
-            # Limit pages to prevent runaway processing
+            # Limit pages for cost control
             if len(pdf_images) > self.max_pages_to_process:
-                print(f"⚠ Limiting to first {self.max_pages_to_process} pages (from {len(pdf_images)})")
+                print(f"⚠ Limiting to first {self.max_pages_to_process} pages (from {len(pdf_images)}) for cost control")
                 pdf_images = pdf_images[:self.max_pages_to_process]
             
-            print(f"✓ Processing {len(pdf_images)} pages with enhanced visual detection")
+            print(f"✓ Processing {len(pdf_images)} pages with Azure OpenAI Vision")
             
-            # Step 2: Extract visual content with enhanced detection
-            print(f"\n🎯 STEP 2: DETECTING VISUAL CONTENT - {characteristic.upper()}")
+            # Step 2: Azure Vision Analysis
+            print(f"\n🤖 STEP 2: AZURE VISION ANALYSIS - {characteristic.upper()}")
             print("─" * 50)
             
             extracted_content = []
             pages_processed = 0
-            total_visual_regions = 0
+            azure_calls_made = 0
             
             for page_num, page_image in enumerate(pdf_images, 1):
                 # Check if we're taking too long
@@ -141,59 +138,76 @@ class EnhancedDocumentProcessor:
                     print(f"⚠ Approaching timeout, stopping at page {page_num}")
                     break
                 
-                print(f"  📄 Processing page {page_num} with visual detection...")
+                print(f"  📄 Processing page {page_num} with Azure Vision...")
                 
                 try:
-                    # Extract content for this page with enhanced visual detection
-                    page_content, regions_found = self._extract_page_content_enhanced(
-                        page_image, page_num, characteristic, debug
+                    # Extract content using Azure OpenAI Vision
+                    page_content = self.extractor.extract_characteristic_content(
+                        page_image, characteristic, page_num, debug
                     )
                     
-                    total_visual_regions += regions_found
+                    # Track Azure API usage
+                    if self.extractor.azure_client:
+                        azure_calls_made += 1
                     
                     if page_content:
                         extracted_content.extend(page_content)
-                        content_types = [item.get('region_metadata', {}).get('content_type', 'unknown') for item in page_content]
-                        type_summary = {}
-                        for ct in content_types:
-                            type_summary[ct] = type_summary.get(ct, 0) + 1
-                        type_str = ', '.join([f"{k}:{v}" for k, v in type_summary.items()])
-                        print(f"    ✓ Found {len(page_content)} items ({type_str}) from {regions_found} visual regions")
+                        print(f"    ✓ Found {len(page_content)} relevant items")
+                        
+                        # Show extraction details
+                        for item in page_content:
+                            confidence = item.get('confidence', 0)
+                            method = item.get('region_metadata', {}).get('detection_method', 'unknown')
+                            print(f"      - {method}: confidence {confidence:.3f}")
                     else:
-                        print(f"    - No relevant content (checked {regions_found} visual regions)")
+                        print(f"    - No relevant content found on page {page_num}")
                     
                     pages_processed += 1
                     
                     # Progress check
                     if pages_processed > 0 and pages_processed % 5 == 0:
-                        print(f"  📊 Progress: {pages_processed}/{len(pdf_images)} pages, {len(extracted_content)} items found, {total_visual_regions} regions analyzed")
+                        print(f"  📊 Progress: {pages_processed}/{len(pdf_images)} pages, {len(extracted_content)} items extracted")
+                        print(f"  🤖 Azure API calls made: {azure_calls_made}")
                 
                 except Exception as e:
                     print(f"    ❌ Error processing page {page_num}: {e}")
                     continue
+                
+                # Rate limiting for Azure API
+                if azure_calls_made > 0:
+                    time.sleep(1)  # 1 second between API calls
             
-            # Step 3: Generate enhanced results
-            print(f"\n📋 STEP 3: GENERATING ENHANCED RESULTS")
+            # Step 3: Generate comprehensive results
+            print(f"\n📋 STEP 3: GENERATING AZURE ANALYSIS RESULTS")
             print("─" * 50)
             
             processing_time = time.time() - start_time
             
-            print(f"Enhanced Results for {characteristic.replace('_', ' ').title()}:")
+            print(f"Azure Vision Analysis Results for {characteristic.replace('_', ' ').title()}:")
             print(f"  🔢 Total items extracted: {len(extracted_content)}")
             print(f"  📄 Pages processed: {pages_processed}/{len(pdf_images)}")
-            print(f"  🔍 Visual regions analyzed: {total_visual_regions}")
+            print(f"  🤖 Azure API calls: {azure_calls_made}")
             print(f"  ⏱️ Processing time: {processing_time:.1f}s")
             print(f"  📈 Extraction rate: {len(extracted_content)/pages_processed:.1f} items/page" if pages_processed > 0 else "")
             
-            # Analyze content types
+            # Analyze extraction methods
             if extracted_content:
-                content_analysis = self._analyze_extracted_content(extracted_content)
-                print(f"  📊 Content breakdown: {content_analysis}")
+                method_analysis = self._analyze_extraction_methods(extracted_content)
+                print(f"  📊 Methods used: {method_analysis}")
+                
+                # Show average confidence
+                avg_confidence = sum(item.get('confidence', 0) for item in extracted_content) / len(extracted_content)
+                print(f"  🎯 Average confidence: {avg_confidence:.3f}")
+                
+                # Show Azure-specific insights
+                azure_items = [item for item in extracted_content if 'azure' in item.get('region_metadata', {}).get('detection_method', '').lower()]
+                if azure_items:
+                    print(f"  🤖 Azure-analyzed items: {len(azure_items)}/{len(extracted_content)}")
             
-            # Save results with enhanced metadata
-            extraction_data = self._create_enhanced_extraction_data(
+            # Save results with Azure metadata
+            extraction_data = self._create_azure_extraction_data(
                 doc_id, source, characteristic, extracted_content, 
-                processing_time, pages_processed, total_visual_regions
+                processing_time, pages_processed, azure_calls_made
             )
             
             pathlib.Path("feedback_data").mkdir(exist_ok=True)
@@ -202,30 +216,26 @@ class EnhancedDocumentProcessor:
             with open(extraction_file, 'w') as f:
                 json.dump(extraction_data, f, indent=2)
             
-            print(f"💾 Enhanced extraction saved: {extraction_file}")
+            print(f"💾 Azure extraction results saved: {extraction_file}")
             
-            # Step 4: Run enhanced LLM feedback
-            print(f"\n🤖 STEP 4: RUNNING ENHANCED VISION FEEDBACK")
+            # Step 4: Run integrated feedback analysis
+            print(f"\n🔄 STEP 4: RUNNING INTEGRATED FEEDBACK ANALYSIS")
             print("─" * 50)
             
-            self._run_enhanced_feedback_safe(doc_id, debug)
+            self._run_integrated_feedback_safe(doc_id, debug)
             
-            # Final enhanced summary
+            # Final summary
             print(f"\n{'='*80}")
-            print(f"🎯 ENHANCED VISUAL EXTRACTION COMPLETED")
+            print(f"🎯 AZURE VISION EXTRACTION COMPLETED")
             print(f"{'='*80}")
             print(f"Characteristic: {characteristic.replace('_', ' ').title()}")
             print(f"Document ID: {doc_id}")
             print(f"Items extracted: {len(extracted_content)}")
-            print(f"Visual regions analyzed: {total_visual_regions}")
+            print(f"Azure API calls: {azure_calls_made}")
             print(f"Processing time: {processing_time:.1f}s")
             
             if extracted_content:
-                avg_confidence = sum(item.get('confidence', 0) for item in extracted_content) / len(extracted_content)
-                print(f"Average confidence: {avg_confidence:.3f}")
-                
-                # Show extraction quality
-                high_conf = sum(1 for item in extracted_content if item.get('confidence', 0) > 0.6)
+                high_conf = sum(1 for item in extracted_content if item.get('confidence', 0) > 0.7)
                 print(f"High confidence items: {high_conf}/{len(extracted_content)}")
             
             print(f"View results: streamlit run feedback_interface.py")
@@ -235,8 +245,7 @@ class EnhancedDocumentProcessor:
             
         except TimeoutError:
             print(f"\n⚠ PROCESSING TIMED OUT after {self.processing_timeout}s")
-            print("This usually indicates an infinite loop or very large document.")
-            print("Try reducing document size or check for processing issues.")
+            print("Consider reducing document size or increasing timeout.")
             return None
             
         except Exception as e:
@@ -250,115 +259,72 @@ class EnhancedDocumentProcessor:
             # Always clear the alarm
             signal.alarm(0)
     
-    def _convert_pdf_to_images_enhanced(self, pdf_path: str, debug: bool = False) -> List[Image.Image]:
-        """Convert PDF to images with enhanced settings for better visual detection"""
+    def _convert_pdf_for_azure(self, pdf_path: str, debug: bool = False) -> List:
+        """Convert PDF to images optimized for Azure Vision analysis"""
         try:
-            print(f"  Converting PDF: {os.path.basename(pdf_path)}")
+            print(f"  Converting PDF for Azure analysis: {os.path.basename(pdf_path)}")
             
             images = convert_from_path(
                 pdf_path,
-                dpi=250,  # Increased DPI for better visual detection
+                dpi=200,  # Optimal for Azure Vision (balance quality/cost)
                 first_page=None,
                 last_page=self.max_pages_to_process,
                 fmt='RGB',
-                thread_count=1  # Single thread to prevent issues
+                thread_count=1
             )
             
             if debug:
-                print(f"    Converted {len(images)} pages at 250 DPI for enhanced visual detection")
+                print(f"    Converted {len(images)} pages at 200 DPI for Azure Vision")
                 for i, img in enumerate(images):
                     print(f"      Page {i+1}: {img.size[0]}x{img.size[1]} pixels")
             
             return images
             
         except Exception as e:
-            print(f"❌ Enhanced PDF conversion failed: {e}")
+            print(f"❌ PDF conversion failed: {e}")
             raise
     
-    def _extract_page_content_enhanced(self, page_image: Image.Image, page_num: int, 
-                                     characteristic: str, debug: bool) -> Tuple[List[Dict], int]:
-        """Extract content from page with enhanced visual detection"""
-        if not self.extractor:
-            return [], 0
-        
-        try:
-            # Set a shorter timeout for individual page processing
-            signal.alarm(25)  # 25 seconds per page max
-            
-            content = self.extractor.extract_characteristic_content(
-                page_image, characteristic, page_num, debug
-            )
-            
-            # Get the number of visual regions that were analyzed
-            regions_analyzed = 0
-            for item in content:
-                metadata = item.get('region_metadata', {})
-                if 'detection_method' in metadata:
-                    regions_analyzed += 1
-            
-            signal.alarm(0)  # Clear alarm
-            return content, regions_analyzed
-            
-        except TimeoutError:
-            print(f"    ⚠ Page {page_num} timed out - skipping")
-            return [], 0
-        except Exception as e:
-            print(f"    ❌ Error extracting from page {page_num}: {e}")
-            if debug:
-                import traceback
-                traceback.print_exc()
-            return [], 0
-        finally:
-            signal.alarm(0)  # Always clear alarm
-    
-    def _analyze_extracted_content(self, extracted_content: List[Dict]) -> str:
-        """Analyze the types of content extracted"""
-        content_types = {}
-        detection_methods = {}
+    def _analyze_extraction_methods(self, extracted_content: List[Dict]) -> str:
+        """Analyze the methods used for extraction"""
+        methods = {}
         
         for item in extracted_content:
-            # Content type analysis
             metadata = item.get('region_metadata', {})
-            content_type = metadata.get('content_type', 'unknown')
-            content_types[content_type] = content_types.get(content_type, 0) + 1
-            
-            # Detection method analysis
-            detection_method = metadata.get('detection_method', 'unknown')
-            detection_methods[detection_method] = detection_methods.get(detection_method, 0) + 1
+            method = metadata.get('detection_method', 'unknown')
+            methods[method] = methods.get(method, 0) + 1
         
         # Format summary
-        type_summary = []
-        if content_types:
-            for ct, count in sorted(content_types.items(), key=lambda x: x[1], reverse=True):
-                type_summary.append(f"{ct}({count})")
+        method_summary = []
+        for method, count in sorted(methods.items(), key=lambda x: x[1], reverse=True):
+            if 'azure' in method.lower():
+                method_summary.append(f"Azure({count})")
+            else:
+                method_summary.append(f"{method}({count})")
         
-        return ', '.join(type_summary) if type_summary else 'none'
+        return ', '.join(method_summary) if method_summary else 'none'
     
-    def _create_enhanced_extraction_data(self, doc_id: str, source: str, characteristic: str, 
-                                       content: List[Dict], processing_time: float, 
-                                       pages_processed: int, visual_regions_analyzed: int) -> Dict:
-        """Create enhanced extraction data structure"""
+    def _create_azure_extraction_data(self, doc_id: str, source: str, characteristic: str, 
+                                    content: List[Dict], processing_time: float, 
+                                    pages_processed: int, azure_calls: int) -> Dict:
+        """Create extraction data with Azure-specific metadata"""
         
-        # Analyze content types
-        content_analysis = {}
-        detection_methods = {}
-        confidence_levels = []
+        # Analyze extraction methods
+        azure_items = []
+        fallback_items = []
+        total_confidence = 0
         
         for item in content:
-            # Content type breakdown
-            metadata = item.get('region_metadata', {})
-            content_type = metadata.get('content_type', 'unknown')
-            content_analysis[content_type] = content_analysis.get(content_type, 0) + 1
+            method = item.get('region_metadata', {}).get('detection_method', 'unknown')
+            confidence = item.get('confidence', 0)
+            total_confidence += confidence
             
-            # Detection method breakdown
-            detection_method = metadata.get('detection_method', 'unknown')
-            detection_methods[detection_method] = detection_methods.get(detection_method, 0) + 1
-            
-            # Confidence tracking
-            confidence_levels.append(item.get('confidence', 0))
+            if 'azure' in method.lower():
+                azure_items.append(item)
+            else:
+                fallback_items.append(item)
         
-        avg_confidence = sum(confidence_levels) / len(confidence_levels) if confidence_levels else 0
-        high_confidence_count = sum(1 for c in confidence_levels if c > 0.6)
+        avg_confidence = total_confidence / len(content) if content else 0
+        high_confidence_count = sum(1 for item in content if item.get('confidence', 0) > 0.7)
         
         return {
             'document_id': doc_id,
@@ -369,31 +335,31 @@ class EnhancedDocumentProcessor:
             'timestamp': datetime.now().isoformat(),
             'total_sections': len(content),
             'pages_processed': pages_processed,
-            'processing_method': 'enhanced_visual_content_extraction',
+            'processing_method': 'azure_openai_vision_first',
             'extraction_summary': {
                 'total_items': len(content),
-                'visual_regions_analyzed': visual_regions_analyzed,
+                'azure_analyzed_items': len(azure_items),
+                'fallback_items': len(fallback_items),
+                'azure_api_calls': azure_calls,
                 'avg_confidence': avg_confidence,
                 'high_confidence_items': high_confidence_count,
                 'pages_with_content': list(set(item.get('page', 0) for item in content)),
-                'content_type_breakdown': content_analysis,
-                'detection_method_breakdown': detection_methods,
                 'extraction_rate_per_page': len(content) / pages_processed if pages_processed > 0 else 0
             },
-            'visual_detection_metadata': {
-                'enhanced_detection_enabled': True,
-                'table_detection_used': 'table_detection' in detection_methods,
-                'diagram_detection_used': 'diagram_detection' in detection_methods,
-                'content_block_detection_used': 'content_block' in detection_methods,
-                'pdf_dpi': 250,
-                'visual_feature_extraction_enabled': True
+            'azure_vision_metadata': {
+                'azure_openai_enabled': azure_calls > 0,
+                'training_data_integrated': True,
+                'vision_analysis_method': 'azure_openai_gpt4_vision',
+                'cost_optimized': True,
+                'intelligent_region_selection': True,
+                'contextual_understanding': True
             }
         }
     
-    def _run_enhanced_feedback_safe(self, doc_id: str, debug: bool = False):
-        """Run enhanced LLM feedback with timeout protection"""
+    def _run_integrated_feedback_safe(self, doc_id: str, debug: bool = False):
+        """Run integrated feedback analysis"""
         try:
-            print("🤖 Launching enhanced vision feedback analyzer...")
+            print("🔄 Running integrated feedback analysis...")
             
             # Use subprocess with timeout
             cmd = [sys.executable, "llm_feedback.py", "--analyze-and-apply", doc_id]
@@ -404,42 +370,43 @@ class EnhancedDocumentProcessor:
                 cmd, 
                 capture_output=True, 
                 text=True, 
-                timeout=150  # 2.5 minute timeout for enhanced feedback
+                timeout=120  # 2 minute timeout for feedback
             )
             
             if result.returncode == 0:
-                print("✅ Enhanced vision feedback completed")
+                print("✅ Integrated feedback analysis completed")
                 
-                # Show feedback summary if available
+                # Show feedback summary
                 if result.stdout:
                     lines = result.stdout.strip().split('\n')
                     for line in lines:
-                        if 'Accuracy:' in line or 'parameter adjustments' in line:
+                        if any(keyword in line.lower() for keyword in ['accuracy:', 'relevance:', 'parameter', 'applied']):
                             print(f"    {line}")
             else:
-                print("⚠️ Enhanced vision feedback had issues - check logs")
+                print("⚠️ Feedback analysis had issues - continuing without it")
                 if debug and result.stderr:
                     print(f"Error: {result.stderr[:200]}...")
                     
         except subprocess.TimeoutExpired:
-            print("⏰ Enhanced vision feedback timed out - continuing without it")
+            print("⏰ Feedback analysis timed out - continuing")
         except Exception as e:
             if debug:
-                print(f"❌ Enhanced vision feedback error: {e}")
+                print(f"❌ Feedback analysis error: {e}")
             else:
-                print("⚠️ Enhanced vision feedback unavailable")
+                print("⚠️ Feedback analysis unavailable")
     
     def process_all_characteristics(self, source: str, debug: bool = False) -> Dict[str, str]:
-        """Process document for all available characteristics with enhanced detection"""
+        """Process document for all characteristics using Azure Vision"""
         if not self.extractor:
-            raise RuntimeError("Enhanced characteristic extractor not available")
+            raise RuntimeError("Azure-First extractor not available")
         
         characteristics = self.extractor.get_available_characteristics()
-        print(f"\n🔄 Processing document for ALL characteristics with enhanced visual detection...")
+        print(f"\n🔄 Processing document with Azure OpenAI Vision for ALL characteristics...")
         print(f"Available: {', '.join(characteristics)}")
         
         results = {}
         overall_start_time = time.time()
+        total_azure_calls = 0
         
         for i, characteristic in enumerate(characteristics, 1):
             print(f"\n{'='*60}")
@@ -467,11 +434,12 @@ class EnhancedDocumentProcessor:
         successful = sum(1 for result in results.values() if result is not None)
         total = len(results)
         
-        print(f"\n🎯 ENHANCED BATCH PROCESSING SUMMARY")
+        print(f"\n🎯 AZURE VISION BATCH PROCESSING SUMMARY")
         print(f"{'='*60}")
         print(f"Successful: {successful}/{total} characteristics")
         print(f"Total processing time: {total_time:.1f}s")
         print(f"Average per characteristic: {total_time/total:.1f}s")
+        print(f"Azure OpenAI method: Primary extraction engine")
         print(f"{'='*60}")
         
         for char, doc_id in results.items():
@@ -481,48 +449,48 @@ class EnhancedDocumentProcessor:
         return results
 
 def main():
-    parser = argparse.ArgumentParser(description="Enhanced Characteristic-Based Construction Document Agent")
+    parser = argparse.ArgumentParser(description="Azure OpenAI-First Construction Document Agent")
     parser.add_argument("--source", help="PDF path or URL to process")
     parser.add_argument("--characteristic", help="Specific characteristic to extract")
     parser.add_argument("--all-characteristics", action="store_true", help="Extract all characteristics")
     parser.add_argument("--debug", action="store_true", help="Enable detailed debug output")
     parser.add_argument("--list-characteristics", action="store_true", help="List available characteristics")
     parser.add_argument("--setup-labeled-data", action="store_true", help="Setup labeled data structure")
-    parser.add_argument("--test-system", action="store_true", help="Test enhanced system configuration")
-    parser.add_argument("--visual-test", action="store_true", help="Run visual detection test")
+    parser.add_argument("--test-system", action="store_true", help="Test Azure system configuration")
+    parser.add_argument("--test-azure", action="store_true", help="Test Azure OpenAI connection")
     
     args = parser.parse_args()
     
     if args.list_characteristics:
-        if CHARACTERISTIC_EXTRACTOR_AVAILABLE:
+        if EXTRACTOR_AVAILABLE:
             try:
-                extractor = CharacteristicBasedExtractor()
+                extractor = AzureFirstExtractor()
                 characteristics = extractor.get_available_characteristics()
-                print("\n📋 Available Characteristics for Enhanced Extraction:")
+                print("\n📋 Available Characteristics for Azure Vision Extraction:")
                 for char in characteristics:
                     info = extractor.get_characteristic_info(char)
-                    visual_features = info.get('visual_features', [])
+                    visual_indicators = info.get('visual_indicators', [])
                     print(f"  🏗️ {char.replace('_', ' ').title()}: {info.get('description', 'No description')}")
-                    if visual_features:
-                        print(f"     Visual features: {', '.join(visual_features)}")
+                    if visual_indicators:
+                        print(f"     Looks for: {', '.join(visual_indicators[:2])}...")
             except Exception as e:
                 print(f"❌ Error loading characteristics: {e}")
         else:
-            print("❌ Enhanced characteristic extractor not available")
+            print("❌ Azure-First extractor not available")
         return 0
     
     if args.setup_labeled_data:
-        print("🏗️ Setting up enhanced labeled data structure...")
+        print("🏗️ Setting up labeled data structure for Azure Vision...")
         
         labeled_path = pathlib.Path("labeled_data")
         labeled_path.mkdir(exist_ok=True)
         
-        # Enhanced characteristics with guidance
+        # Enhanced characteristics with Azure-specific guidance
         characteristics_info = {
-            "anchors": "Add clear diagrams showing anchor details, connection methods, fastening systems",
-            "design_pressure": "Add tables/charts with pressure ratings, wind load data, performance specs", 
-            "glazing": "Add glazing section details, glass specifications, IGU assemblies",
-            "impact_rating": "Add impact rating tables, test results, compliance charts"
+            "anchors": "Add clear technical drawings of anchor details, fastener assemblies, connection methods",
+            "design_pressure": "Add pressure tables, wind load charts, performance data with clear numerical values", 
+            "glazing": "Add glazing cross-sections, glass specifications, IGU details with clear visual elements",
+            "impact_rating": "Add impact rating tables, test results, compliance charts with clear data"
         }
         
         for char, guidance in characteristics_info.items():
@@ -531,168 +499,167 @@ def main():
             
             readme_path = char_path / "README.txt"
             with open(readme_path, 'w') as f:
-                f.write(f"""Enhanced Training Data for: {char.replace('_', ' ').title()}
+                f.write(f"""Azure Vision Training Data: {char.replace('_', ' ').title()}
 
 {guidance}
 
-ENHANCED VISUAL DETECTION GUIDELINES:
-- Focus on VISUAL content: diagrams, tables, charts, technical drawings
-- Avoid pure text paragraphs - system looks for visual elements
-- High-quality images (300+ DPI recommended)
-- Clear, uncluttered examples
-- 5-10 diverse examples per category
+AZURE OPENAI VISION GUIDELINES:
+- Azure OpenAI will analyze these examples to understand your target content
+- Focus on clear, well-defined visual elements that represent {char.replace('_', ' ')}
+- High-quality images (200+ DPI recommended)
+- Clear, uncluttered examples that show the characteristic clearly
+- 2-5 diverse examples per category (quality over quantity)
 
-BEST CONTENT TYPES:
-- Technical drawings and cross-sections
-- Tables with data/specifications  
-- Charts and graphs
-- Assembly details and callouts
-- Compliance certificates with visual elements
+OPTIMAL CONTENT TYPES FOR AZURE VISION:
+- Technical drawings with clear details and annotations
+- Tables with structured data and clear headers
+- Charts and graphs with visible data points
+- Assembly details with clear visual elements
+- Specification sheets with visual components
 
-The enhanced system will detect:
-✓ Table structures using line detection
-✓ Diagram regions using edge analysis  
-✓ Technical drawings using feature extraction
-✓ Visual content blocks with structured elements
+Azure OpenAI will:
+✓ Understand the context and meaning of your examples
+✓ Compare document content to these training examples
+✓ Provide detailed reasoning for each extraction
+✓ Focus on relevance and accuracy over quantity
 """)
         
-        print(f"✅ Enhanced structure created in: {labeled_path}")
-        print("Add your visual training content to each category folder")
-        print("Focus on diagrams, tables, and technical drawings - not text!")
+        print(f"✅ Azure Vision training structure created in: {labeled_path}")
+        print("Add your training examples - Azure OpenAI will learn from these!")
+        print("Focus on clear, representative examples of each characteristic.")
+        return 0
+    
+    if args.test_azure:
+        print("Testing Azure OpenAI connection...")
+        
+        try:
+            from langchain_openai import AzureChatOpenAI
+            from langchain.schema import HumanMessage
+            
+            endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            deployment = os.getenv('AZURE_OPENAI_DEPLOYMENT')
+            
+            print(f"Endpoint: {endpoint[:30] + '...' if endpoint else 'Missing'}")
+            print(f"API Key: {'✓ Present' if api_key else '❌ Missing'}")
+            print(f"Deployment: {deployment if deployment else '❌ Missing'}")
+            
+            if not all([endpoint, api_key, deployment]):
+                print("❌ Azure OpenAI credentials missing")
+                print("\nRequired environment variables:")
+                print("  - AZURE_OPENAI_ENDPOINT")
+                print("  - AZURE_OPENAI_API_KEY")
+                print("  - AZURE_OPENAI_DEPLOYMENT")
+                return 1
+            
+            # Test connection
+            client = AzureChatOpenAI(
+                azure_endpoint=endpoint,
+                api_key=api_key,
+                azure_deployment=deployment,
+                api_version="2024-02-01",
+                temperature=0.1,
+                max_tokens=100
+            )
+            
+            test_message = HumanMessage(content="Hello, this is a test message.")
+            
+            print("Testing connection...")
+            response = client.invoke([test_message])
+            
+            print("✅ Azure OpenAI connection successful")
+            print(f"Response: {response.content[:50]}...")
+            
+            # Test vision capability if deployment supports it
+            print("\nTesting vision capability...")
+            vision_message = HumanMessage(content=[
+                {"type": "text", "text": "Describe this simple test."},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="}}
+            ])
+            
+            try:
+                vision_response = client.invoke([vision_message])
+                print("✅ Vision capability confirmed")
+                print(f"Vision response: {vision_response.content[:50]}...")
+            except Exception as ve:
+                print(f"⚠️ Vision capability test failed: {ve}")
+                print("This might be a deployment limitation, not a connection issue")
+            
+        except Exception as e:
+            print(f"❌ Azure OpenAI test failed: {e}")
+            return 1
+        
         return 0
     
     if args.test_system:
-        print("🧪 Testing enhanced system configuration...")
+        print("🧪 Testing Azure-First system configuration...")
         
         # Test imports
         print(f"✓ PDF2Image: {PDF2IMAGE_AVAILABLE}")
-        print(f"✓ OpenCV: {CV_AVAILABLE}")
-        print(f"✓ Enhanced Extractor: {CHARACTERISTIC_EXTRACTOR_AVAILABLE}")
-        
-        if CV_AVAILABLE:
-            print("  OpenCV modules available:")
-            print("    ✓ Image processing")
-            print("    ✓ Edge detection (Canny)")
-            print("    ✓ Morphological operations")
-            print("    ✓ Contour detection")
-            print("    ✓ Feature extraction")
+        print(f"✓ Azure OpenAI: {AZURE_AVAILABLE}")
+        print(f"✓ Azure-First Extractor: {EXTRACTOR_AVAILABLE}")
         
         # Test Azure config
         required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
         missing = [var for var in required_vars if not os.getenv(var)]
-        print(f"✓ Azure OpenAI: {'Configured' if not missing else f'Missing {missing}'}")
+        print(f"✓ Azure OpenAI Config: {'Complete' if not missing else f'Missing {missing}'}")
         
-        # Test enhanced training data
+        # Test training data
         labeled_path = pathlib.Path("labeled_data")
         if labeled_path.exists():
             categories = [d for d in labeled_path.iterdir() if d.is_dir()]
             total_images = 0
             
-            print("Enhanced Training Data Analysis:")
+            print("Azure Vision Training Data:")
             for cat_dir in categories:
                 images = list(cat_dir.glob("*.jpg")) + list(cat_dir.glob("*.png"))
                 total_images += len(images)
                 
                 if images:
-                    # Analyze first image for guidance
-                    try:
-                        if CV_AVAILABLE:
-                            sample_img = cv2.imread(str(images[0]))
-                            if sample_img is not None:
-                                height, width = sample_img.shape[:2]
-                                print(f"  ✓ {cat_dir.name}: {len(images)} images (sample: {width}x{height})")
-                            else:
-                                print(f"  ✓ {cat_dir.name}: {len(images)} images")
-                        else:
-                            print(f"  ✓ {cat_dir.name}: {len(images)} images")
-                    except:
-                        print(f"  ✓ {cat_dir.name}: {len(images)} images")
+                    print(f"  ✓ {cat_dir.name}: {len(images)} examples")
                 else:
-                    print(f"  ⚠ {cat_dir.name}: No images - add visual training data!")
+                    print(f"  ⚠ {cat_dir.name}: No examples - Azure needs training data!")
             
-            print(f"✓ Total training images: {total_images}")
+            print(f"✓ Total training examples: {total_images}")
             
-            if total_images < 12:
-                print("⚠ Consider adding more training images (3+ per category)")
-                print("  Focus on: diagrams, tables, technical drawings")
+            if total_images < 8:
+                print("⚠ Consider adding more training examples (2+ per category)")
+                print("  Azure OpenAI will learn better with diverse examples")
         else:
             print("⚠ No labeled_data directory - run --setup-labeled-data")
         
+        print("\n🎯 Azure-First System Status:")
+        if not missing and total_images >= 4 and AZURE_AVAILABLE:
+            print("✅ System ready for Azure OpenAI-powered extraction")
+        elif missing:
+            print("❌ Configure Azure OpenAI credentials first")
+        else:
+            print("⚠ System partially ready - add training data for best results")
+        
         return 0
     
-    if args.visual_test:
-        print("🔍 Running visual detection test...")
-        
-        if not CV_AVAILABLE:
-            print("❌ OpenCV not available - cannot run visual test")
-            return 1
-        
-        # Test visual detection capabilities
-        print("Testing visual detection methods:")
-        
-        # Create test image
-        test_img = np.zeros((400, 600, 3), dtype=np.uint8)
-        test_img.fill(255)  # White background
-        
-        # Draw test table
-        cv2.rectangle(test_img, (50, 50), (300, 200), (0, 0, 0), 2)
-        cv2.line(test_img, (50, 100), (300, 100), (0, 0, 0), 1)
-        cv2.line(test_img, (50, 150), (300, 150), (0, 0, 0), 1)
-        cv2.line(test_img, (150, 50), (150, 200), (0, 0, 0), 1)
-        
-        # Draw test diagram
-        cv2.circle(test_img, (450, 125), 50, (0, 0, 0), 2)
-        cv2.line(test_img, (400, 125), (500, 125), (0, 0, 0), 2)
-        cv2.line(test_img, (450, 75), (450, 175), (0, 0, 0), 2)
-        
-        gray = cv2.cvtColor(test_img, cv2.COLOR_BGR2GRAY)
-        
-        # Test table detection
-        horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 1))
-        vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 25))
-        
-        horizontal_lines = cv2.morphologyEx(gray, cv2.MORPH_OPEN, horizontal_kernel)
-        vertical_lines = cv2.morphologyEx(gray, cv2.MORPH_OPEN, vertical_kernel)
-        
-        h_lines = np.sum(horizontal_lines > 0)
-        v_lines = np.sum(vertical_lines > 0)
-        
-        print(f"  ✓ Table detection: {h_lines} horizontal, {v_lines} vertical line pixels")
-        
-        # Test edge detection
-        edges = cv2.Canny(gray, 30, 100)
-        edge_pixels = np.sum(edges > 0)
-        print(f"  ✓ Edge detection: {edge_pixels} edge pixels found")
-        
-        # Test contour detection
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        print(f"  ✓ Contour detection: {len(contours)} contours found")
-        
-        print("✅ Visual detection capabilities verified")
-        return 0
-    
-    # Require characteristic selection
+    # Require source and characteristic selection
     if not args.source:
         parser.error("--source is required")
     
     if not args.characteristic and not args.all_characteristics:
         parser.error("Either --characteristic or --all-characteristics is required")
     
-    print("🎯 Starting Enhanced Visual Content Extraction...")
+    print("🎯 Starting Azure OpenAI-First Document Processing...")
     print(f"📅 Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     try:
-        processor = EnhancedDocumentProcessor()
+        processor = AzureFirstDocumentProcessor()
         
         if args.all_characteristics:
             results = processor.process_all_characteristics(args.source, debug=args.debug)
             successful = sum(1 for result in results.values() if result is not None)
-            print(f"\n🎉 ENHANCED BATCH PROCESSING COMPLETE!")
+            print(f"\n🎉 AZURE VISION BATCH PROCESSING COMPLETE!")
             print(f"Successful: {successful}/{len(results)} characteristics")
             
             if successful > 0:
                 print(f"\nNext steps:")
-                print(f"  1. View enhanced results: streamlit run feedback_interface.py")
+                print(f"  1. View results: streamlit run feedback_interface.py")
                 print(f"  2. Run diagnostic: python diagnostic.py")
         else:
             doc_id = processor.process_document_for_characteristic(
@@ -700,29 +667,28 @@ The enhanced system will detect:
             )
             
             if doc_id:
-                print(f"\n🎉 ENHANCED PROCESSING SUCCESSFUL!")
+                print(f"\n🎉 AZURE VISION PROCESSING SUCCESSFUL!")
                 print(f"Document ID: {doc_id}")
                 print(f"Characteristic: {args.characteristic.replace('_', ' ').title()}")
                 
                 print(f"\nNext steps:")
-                print(f"  1. View enhanced results: streamlit run feedback_interface.py")
+                print(f"  1. View results: streamlit run feedback_interface.py")
                 print(f"  2. Run diagnostic: python diagnostic.py")
-                print(f"  3. Run vision feedback: python llm_feedback.py --analyze-and-apply {doc_id}")
             else:
-                print(f"\n❌ ENHANCED PROCESSING FAILED!")
+                print(f"\n❌ AZURE VISION PROCESSING FAILED!")
                 print(f"\nTroubleshooting:")
-                print(f"  1. Check training data: python adaptive_agent.py --setup-labeled-data")
-                print(f"  2. Test system: python adaptive_agent.py --test-system")
+                print(f"  1. Test Azure connection: python adaptive_agent.py --test-azure")
+                print(f"  2. Check training data: python adaptive_agent.py --setup-labeled-data")
                 print(f"  3. Run with debug: python adaptive_agent.py --source {args.source} --characteristic {args.characteristic} --debug")
                 return 1
         
         return 0
         
     except KeyboardInterrupt:
-        print(f"\n⚠️ Enhanced processing interrupted by user")
+        print(f"\n⚠️ Processing interrupted by user")
         return 1
     except Exception as e:
-        print(f"\n❌ ENHANCED PROCESSING FAILED: {e}")
+        print(f"\n❌ PROCESSING FAILED: {e}")
         if args.debug:
             import traceback
             traceback.print_exc()

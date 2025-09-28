@@ -424,5 +424,312 @@
     "llm_available": true,
     "llm_actually_used": true,
     "analysis_method": "vision_based_simplified"
+  },
+  {
+    "document_id": "66a3bf06377b",
+    "timestamp": "2025-09-23T21:28:50.870346",
+    "analysis_method": "enhanced_vision_feedback",
+    "extraction_summary": {
+      "total_items": 71,
+      "pages_processed": 0,
+      "visual_regions_analyzed": 71,
+      "avg_confidence": 0.8884393748685291,
+      "high_confidence_items": 71,
+      "extraction_rate": 7.888888888888889,
+      "detection_methods": {
+        "sliding_window": 71
+      },
+      "content_types": {
+        "potential_diagram": 71
+      }
+    },
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "total_items_in_extraction": 71,
+      "vision_available": true,
+      "analysis_status": "completed",
+      "avg_confidence": 0.5554,
+      "relevance_rate": 0.0,
+      "construction_authenticity_rate": 0.0,
+      "visual_quality_rate": 0.3,
+      "extraction_accuracy_rate": 0.3,
+      "detailed_counts": {
+        "relevance": {
+          "NOT_RELEVANT": 10
+        },
+        "quality": {
+          "POOR": 5,
+          "FAIR": 2,
+          "EXCELLENT": 3
+        },
+        "construction": {
+          "NOT_CONSTRUCTION": 10
+        },
+        "accuracy": {
+          "POOR": 6,
+          "GOOD": 1,
+          "EXCELLENT": 2,
+          "FAIR": 1
+        }
+      },
+      "errors": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.6499999999999999,
+        "similarity_threshold": 0.85,
+        "construction_bias": 2.3,
+        "min_region_size": 12000
+      },
+      "reasoning": "Lowered thresholds due to low accuracy (30.0%); Increased construction bias due to low authenticity rate (0.0%); Increased minimum region size due to low relevance (0.0%)",
+      "priority": "high",
+      "confidence": 0.6
+    },
+    "quality_metrics": {
+      "extraction_efficiency": 1.0,
+      "confidence_quality": 0.8884393748685291,
+      "detection_diversity": 0.3333333333333333,
+      "overall_quality_score": 0.20884393748685293
+    }
+  },
+  {
+    "document_id": "03a1cf0233f7",
+    "timestamp": "2025-09-23T21:31:46.331906",
+    "analysis_method": "enhanced_vision_feedback",
+    "extraction_summary": {
+      "total_items": 63,
+      "pages_processed": 0,
+      "visual_regions_analyzed": 63,
+      "avg_confidence": 0.8207352375448321,
+      "high_confidence_items": 63,
+      "extraction_rate": 7.0,
+      "detection_methods": {
+        "sliding_window": 63
+      },
+      "content_types": {
+        "potential_diagram": 63
+      }
+    },
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "total_items_in_extraction": 63,
+      "vision_available": true,
+      "analysis_status": "completed",
+      "avg_confidence": 0.4626,
+      "relevance_rate": 0.0,
+      "construction_authenticity_rate": 0.0,
+      "visual_quality_rate": 0.3,
+      "extraction_accuracy_rate": 0.2,
+      "detailed_counts": {
+        "relevance": {
+          "NOT_RELEVANT": 10
+        },
+        "quality": {
+          "POOR": 6,
+          "EXCELLENT": 2,
+          "GOOD": 1,
+          "FAIR": 1
+        },
+        "construction": {
+          "NOT_CONSTRUCTION": 10
+        },
+        "accuracy": {
+          "POOR": 6,
+          "GOOD": 2,
+          "FAIR": 2
+        }
+      },
+      "errors": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.5999999999999999,
+        "similarity_threshold": 0.7999999999999999,
+        "construction_bias": 2.5999999999999996,
+        "min_region_size": 14400
+      },
+      "reasoning": "Lowered thresholds due to low accuracy (20.0%); Increased construction bias due to low authenticity rate (0.0%); Increased minimum region size due to low relevance (0.0%)",
+      "priority": "high",
+      "confidence": 0.5666666666666667
+    },
+    "quality_metrics": {
+      "extraction_efficiency": 1.0,
+      "confidence_quality": 0.8207352375448321,
+      "detection_diversity": 0.3333333333333333,
+      "overall_quality_score": 0.16207352375448325
+    }
+  },
+  {
+    "document_id": "d04da3a8cf38",
+    "timestamp": "2025-09-23T21:34:23.481354",
+    "analysis_method": "enhanced_vision_feedback",
+    "extraction_summary": {
+      "total_items": 71,
+      "pages_processed": 0,
+      "visual_regions_analyzed": 71,
+      "avg_confidence": 0.8950700378124682,
+      "high_confidence_items": 71,
+      "extraction_rate": 7.888888888888889,
+      "detection_methods": {
+        "sliding_window": 71
+      },
+      "content_types": {
+        "potential_diagram": 71
+      }
+    },
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "total_items_in_extraction": 71,
+      "vision_available": true,
+      "analysis_status": "completed",
+      "avg_confidence": 0.465,
+      "relevance_rate": 0.0,
+      "construction_authenticity_rate": 0.0,
+      "visual_quality_rate": 0.3,
+      "extraction_accuracy_rate": 0.2,
+      "detailed_counts": {
+        "relevance": {
+          "NOT_RELEVANT": 10
+        },
+        "quality": {
+          "POOR": 5,
+          "FAIR": 2,
+          "EXCELLENT": 2,
+          "GOOD": 1
+        },
+        "construction": {
+          "NOT_CONSTRUCTION": 10
+        },
+        "accuracy": {
+          "POOR": 5,
+          "FAIR": 3,
+          "GOOD": 1,
+          "EXCELLENT": 1
+        }
+      },
+      "errors": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.5499999999999998,
+        "similarity_threshold": 0.7499999999999999,
+        "construction_bias": 2.8999999999999995,
+        "min_region_size": 17280
+      },
+      "reasoning": "Lowered thresholds due to low accuracy (20.0%); Increased construction bias due to low authenticity rate (0.0%); Increased minimum region size due to low relevance (0.0%)",
+      "priority": "high",
+      "confidence": 0.5666666666666667
+    },
+    "quality_metrics": {
+      "extraction_efficiency": 1.0,
+      "confidence_quality": 0.8950700378124682,
+      "detection_diversity": 0.3333333333333333,
+      "overall_quality_score": 0.16950700378124683
+    }
+  },
+  {
+    "document_id": "89d0dd0678b6",
+    "timestamp": "2025-09-23T21:37:00.478357",
+    "analysis_method": "enhanced_vision_feedback",
+    "extraction_summary": {
+      "total_items": 71,
+      "pages_processed": 0,
+      "visual_regions_analyzed": 71,
+      "avg_confidence": 0.8482446733141142,
+      "high_confidence_items": 71,
+      "extraction_rate": 7.888888888888889,
+      "detection_methods": {
+        "sliding_window": 71
+      },
+      "content_types": {
+        "potential_diagram": 71
+      }
+    },
+    "vision_analysis_summary": {
+      "total_items_analyzed": 10,
+      "total_items_in_extraction": 71,
+      "vision_available": true,
+      "analysis_status": "completed",
+      "avg_confidence": 0.5927,
+      "relevance_rate": 0.0,
+      "construction_authenticity_rate": 0.0,
+      "visual_quality_rate": 0.3,
+      "extraction_accuracy_rate": 0.3,
+      "detailed_counts": {
+        "relevance": {
+          "NOT_RELEVANT": 10
+        },
+        "quality": {
+          "POOR": 6,
+          "FAIR": 1,
+          "EXCELLENT": 3
+        },
+        "construction": {
+          "NOT_CONSTRUCTION": 9,
+          "UNCERTAIN": 1
+        },
+        "accuracy": {
+          "FAIR": 3,
+          "POOR": 4,
+          "EXCELLENT": 1,
+          "GOOD": 2
+        }
+      },
+      "errors": 0
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.49999999999999983,
+        "similarity_threshold": 0.6999999999999998,
+        "construction_bias": 3.0,
+        "min_region_size": 20736
+      },
+      "reasoning": "Lowered thresholds due to low accuracy (30.0%); Increased construction bias due to low authenticity rate (0.0%); Increased minimum region size due to low relevance (0.0%)",
+      "priority": "high",
+      "confidence": 0.6
+    },
+    "quality_metrics": {
+      "extraction_efficiency": 1.0,
+      "confidence_quality": 0.8482446733141142,
+      "detection_diversity": 0.3333333333333333,
+      "overall_quality_score": 0.2048244673314114
+    }
+  },
+  {
+    "document_id": "59eec2bc818d",
+    "timestamp": "2025-09-26T11:04:17.915597",
+    "analysis_method": "enhanced_vision_feedback",
+    "extraction_summary": {
+      "total_items": 0,
+      "pages_processed": 0,
+      "visual_regions_analyzed": 0,
+      "avg_confidence": 0,
+      "high_confidence_items": 0,
+      "extraction_rate": 0.0,
+      "detection_methods": {},
+      "content_types": {}
+    },
+    "vision_analysis_summary": {
+      "total_items_analyzed": 0,
+      "vision_available": true,
+      "analysis_status": "no_items_to_analyze"
+    },
+    "parameter_recommendations": {
+      "adjustments": {
+        "confidence_threshold": 0.34999999999999987,
+        "similarity_threshold": 0.5499999999999998,
+        "construction_bias": 3.0,
+        "min_region_size": 24883
+      },
+      "reasoning": "Significantly lowered thresholds due to no extractions",
+      "priority": "critical",
+      "confidence": 0.8
+    },
+    "quality_metrics": {
+      "extraction_efficiency": 0,
+      "confidence_quality": 0,
+      "detection_diversity": 0,
+      "overall_quality_score": 0
+    }
   }
 ]

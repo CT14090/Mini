@@ -1,23 +1,23 @@
-Enhanced Training Data for: Impact Rating
+Azure Vision Training Data: Impact Rating
 
-Add impact rating tables, test results, compliance charts
+Add impact rating tables, test results, compliance charts with clear data
 
-ENHANCED VISUAL DETECTION GUIDELINES:
-- Focus on VISUAL content: diagrams, tables, charts, technical drawings
-- Avoid pure text paragraphs - system looks for visual elements
-- High-quality images (300+ DPI recommended)
-- Clear, uncluttered examples
-- 5-10 diverse examples per category
+AZURE OPENAI VISION GUIDELINES:
+- Azure OpenAI will analyze these examples to understand your target content
+- Focus on clear, well-defined visual elements that represent impact rating
+- High-quality images (200+ DPI recommended)
+- Clear, uncluttered examples that show the characteristic clearly
+- 2-5 diverse examples per category (quality over quantity)
 
-BEST CONTENT TYPES:
-- Technical drawings and cross-sections
-- Tables with data/specifications  
-- Charts and graphs
-- Assembly details and callouts
-- Compliance certificates with visual elements
+OPTIMAL CONTENT TYPES FOR AZURE VISION:
+- Technical drawings with clear details and annotations
+- Tables with structured data and clear headers
+- Charts and graphs with visible data points
+- Assembly details with clear visual elements
+- Specification sheets with visual components
 
-The enhanced system will detect:
-✓ Table structures using line detection
-✓ Diagram regions using edge analysis  
-✓ Technical drawings using feature extraction
-✓ Visual content blocks with structured elements
+Azure OpenAI will:
+✓ Understand the context and meaning of your examples
+✓ Compare document content to these training examples
+✓ Provide detailed reasoning for each extraction
+✓ Focus on relevance and accuracy over quantity

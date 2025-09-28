@@ -1,1064 +1,817 @@
 #!/usr/bin/env python3
 # llm_feedback.py
 """
-Enhanced LLM Feedback System with Advanced Vision Analysis - VISUAL CONTENT FOCUSED
-Provides intelligent feedback on visual content extraction quality
+Enhanced LLM Feedback System with Azure OpenAI Vision Analysis
+Provides intelligent feedback on extraction quality and parameter optimization
 """
 
 import json
 import os
 import pathlib
-import sys
 import time
-import base64
 import argparse
-import signal
+import base64
+import io
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 try:
     from dotenv import load_dotenv
     load_dotenv(override=True)
-except:
+except ImportError:
     pass
 
-# Timeout handler
-def timeout_handler(signum, frame):
-    raise TimeoutError('LLM feedback timed out')
-
-# LangChain imports
-LANGCHAIN_AVAILABLE = False
+# Azure OpenAI imports
+AZURE_AVAILABLE = False
 try:
     from langchain_openai import AzureChatOpenAI
-    from langchain_core.messages import HumanMessage
-    LANGCHAIN_AVAILABLE = True
-    print("✓ LangChain available for Enhanced Azure OpenAI Vision")
+    from langchain.schema import HumanMessage
+    AZURE_AVAILABLE = True
 except ImportError:
-    print("⚠ LangChain not available")
+    print("⚠ Azure OpenAI not available - install with: pip install langchain-openai")
 
-class EnhancedVisionFeedbackAnalyzer:
-    """Enhanced vision feedback with focus on visual content quality"""
+class EnhancedLLMFeedback:
+    """Enhanced LLM feedback system with construction-focused vision analysis"""
     
     def __init__(self):
-        self.azure_available = self._check_azure_config()
-        self.llm = None
-        self.analysis_timeout = 180  # 3 minutes max for enhanced analysis
-        self.max_items_to_analyze = 8  # Increased for better analysis
+        self.feedback_log_file = "feedback_log.json"
+        self.learning_params_file = "learning_parameters.json"
+        self.azure_client = None
         
-        if self.azure_available and LANGCHAIN_AVAILABLE:
-            try:
-                self.llm = AzureChatOpenAI(
-                    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-                    api_version="2024-02-15-preview",
-                    temperature=0.1,
-                    max_tokens=1500  # Increased for detailed analysis
-                )
-                print("✓ Enhanced Azure OpenAI Vision configured")
-            except Exception as e:
-                print(f"⚠ Enhanced Azure OpenAI setup failed: {e}")
-                self.azure_available = False
+        # Initialize Azure OpenAI if available
+        if AZURE_AVAILABLE:
+            self._init_azure_client()
         
-        # Load enhanced reference images
-        self.labeled_data_path = pathlib.Path("labeled_data")
-        self.reference_images = self._load_enhanced_reference_images()
+        # Load current learning parameters
+        self.current_params = self._load_learning_parameters()
+        
+        print(f"✓ Enhanced feedback system initialized")
+        if self.azure_client:
+            print(f"  ✓ Azure OpenAI vision analysis available")
+        else:
+            print(f"  ⚠ Azure OpenAI not configured - using fallback analysis")
     
-    def _check_azure_config(self) -> bool:
-        """Check Azure OpenAI configuration"""
-        required_vars = ['AZURE_OPENAI_ENDPOINT', 'AZURE_OPENAI_API_KEY', 'AZURE_OPENAI_DEPLOYMENT']
-        missing = [var for var in required_vars if not os.getenv(var)]
-        return len(missing) == 0
-    
-    def _load_enhanced_reference_images(self) -> Dict[str, List[Dict]]:
-        """Load enhanced reference images with metadata"""
-        reference_images = {}
-        
-        if not self.labeled_data_path.exists():
-            return reference_images
-        
-        print("📚 Loading enhanced reference images...")
-        
-        for category_dir in self.labeled_data_path.iterdir():
-            if category_dir.is_dir():
-                category = category_dir.name
-                image_files = list(category_dir.glob("*.jpg")) + list(category_dir.glob("*.png"))
-                
-                reference_images[category] = []
-                
-                # Load up to 3 reference images per category with metadata
-                for img_file in image_files[:3]:
-                    try:
-                        with open(img_file, 'rb') as f:
-                            img_data = f.read()
-                            
-                            # Skip very large images
-                            if len(img_data) > 2000000:  # 2MB limit
-                                continue
-                                
-                            b64_data = base64.b64encode(img_data).decode('ascii')
-                            data_uri = f"data:image/jpeg;base64,{b64_data}"
-                            
-                            reference_images[category].append({
-                                'data_uri': data_uri,
-                                'filename': img_file.name,
-                                'size_bytes': len(img_data),
-                                'category': category
-                            })
-                    except Exception as e:
-                        continue
-                
-                print(f"  ✓ {category}: {len(reference_images[category])} enhanced reference images")
-        
-        return reference_images
-    
-    def analyze_extraction_with_enhanced_vision(self, document_id: str, debug: bool = False) -> Dict:
-        """Analyze extraction with enhanced vision capabilities"""
-        # Set analysis timeout
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(self.analysis_timeout)
-        
+    def _init_azure_client(self):
+        """Initialize Azure OpenAI client"""
         try:
-            print(f"🔍 Enhanced vision analysis of extraction {document_id} (timeout: {self.analysis_timeout}s)...")
+            endpoint = os.getenv('AZURE_OPENAI_ENDPOINT')
+            api_key = os.getenv('AZURE_OPENAI_API_KEY')
+            deployment = os.getenv('AZURE_OPENAI_DEPLOYMENT')
             
-            # Load extraction data
-            extraction_file = f"feedback_data/extraction_{document_id}.json"
-            if not os.path.exists(extraction_file):
-                raise FileNotFoundError(f"Extraction file not found: {extraction_file}")
+            if not all([endpoint, api_key, deployment]):
+                print("  ⚠ Azure OpenAI credentials incomplete")
+                return
             
-            with open(extraction_file) as f:
-                extraction_data = json.load(f)
-            
-            extracted_sections = extraction_data.get('extracted_sections', [])
-            current_params = extraction_data.get('parameters_used', {})
-            target_characteristic = extraction_data.get('target_characteristic', 'unknown')
-            
-            # Enhanced item selection - prioritize by confidence and detection method
-            items_to_analyze = self._select_items_for_analysis(extracted_sections, debug)
-            print(f"  📊 Analyzing {len(items_to_analyze)} items (selected from {len(extracted_sections)} total)")
-            
-            if not self.azure_available or not self.llm:
-                print("  ⚠ Azure OpenAI not available - using enhanced fallback")
-                return self._enhanced_fallback_analysis(extraction_data, debug)
-            
-            # Enhanced vision analysis
-            vision_results = []
-            analysis_start_time = time.time()
-            
-            for i, section in enumerate(items_to_analyze):
-                if time.time() - analysis_start_time > self.analysis_timeout * 0.8:
-                    print(f"    ⚠ Approaching timeout, analyzed {i}/{len(items_to_analyze)} items")
-                    break
-                
-                if 'data_uri' in section:
-                    detection_method = section.get('region_metadata', {}).get('detection_method', 'unknown')
-                    content_type = section.get('region_metadata', {}).get('content_type', 'unknown')
-                    confidence = section.get('confidence', 0)
-                    
-                    print(f"    Analyzing item {i+1}: {content_type} via {detection_method} (confidence: {confidence:.3f})")
-                    
-                    try:
-                        vision_result = self._analyze_single_item_enhanced(section, target_characteristic, debug)
-                        vision_results.append(vision_result)
-                    except Exception as e:
-                        print(f"    ❌ Error analyzing item {i+1}: {e}")
-                        continue
-            
-            # Generate enhanced analysis
-            analysis_result = self._generate_enhanced_analysis(
-                extraction_data, vision_results, current_params, debug
+            self.azure_client = AzureChatOpenAI(
+                azure_endpoint=endpoint,
+                api_key=api_key,
+                azure_deployment=deployment,
+                api_version="2024-02-01",
+                temperature=0.1,
+                max_tokens=2000
             )
             
-            return analysis_result
-            
-        except TimeoutError:
-            print(f"  ⚠ Enhanced analysis timed out after {self.analysis_timeout}s")
-            return self._timeout_fallback_analysis(extraction_data if 'extraction_data' in locals() else {})
-        
         except Exception as e:
-            print(f"  ❌ Enhanced analysis failed: {e}")
-            if debug:
-                import traceback
-                traceback.print_exc()
-            return self._error_fallback_analysis(extraction_data if 'extraction_data' in locals() else {})
-        
-        finally:
-            signal.alarm(0)  # Clear timeout
+            print(f"  ⚠ Azure OpenAI initialization failed: {e}")
+            self.azure_client = None
     
-    def _select_items_for_analysis(self, sections: List[Dict], debug: bool) -> List[Dict]:
-        """Intelligently select items for vision analysis"""
-        if not sections:
-            return []
-        
-        # Sort by multiple criteria
-        def sort_key(item):
-            confidence = item.get('confidence', 0)
-            detection_method = item.get('region_metadata', {}).get('detection_method', 'unknown')
-            content_type = item.get('region_metadata', {}).get('content_type', 'unknown')
-            
-            # Priority scoring
-            priority_score = confidence
-            
-            # Boost specific detection methods
-            if detection_method == 'table_detection':
-                priority_score += 0.2
-            elif detection_method == 'diagram_detection':
-                priority_score += 0.15
-            
-            # Boost specific content types
-            if content_type in ['table', 'diagram']:
-                priority_score += 0.1
-                
-            return priority_score
-        
-        # Sort by priority and take top items
-        sorted_sections = sorted(sections, key=sort_key, reverse=True)
-        selected_items = sorted_sections[:self.max_items_to_analyze]
-        
-        if debug:
-            print(f"    Selection criteria applied:")
-            for i, item in enumerate(selected_items[:3]):  # Show top 3
-                score = sort_key(item)
-                method = item.get('region_metadata', {}).get('detection_method', 'unknown')
-                content_type = item.get('region_metadata', {}).get('content_type', 'unknown')
-                print(f"      {i+1}. Score: {score:.3f}, Method: {method}, Type: {content_type}")
-        
-        return selected_items
-    
-    def _analyze_single_item_enhanced(self, section: Dict, target_characteristic: str, debug: bool) -> Dict:
-        """Enhanced analysis of single item with detailed vision prompts"""
-        signal.alarm(45)  # 45 second timeout per item
+    def _load_learning_parameters(self) -> Dict:
+        """Load current learning parameters"""
+        default_params = {
+            'confidence_threshold': 0.35,
+            'min_region_size': 15000,
+            'max_region_size': 2500000,
+            'similarity_threshold': 0.35,
+            'construction_bias': 2.0,
+            'edge_density_range': [0.01, 0.25],
+            'line_density_threshold': 0.005,
+            'circular_elements_positive': True,
+            'last_updated': datetime.now().isoformat()
+        }
         
         try:
-            extracted_image = section.get('data_uri', '')
-            predicted_category = section.get('type', 'unknown')
-            region_metadata = section.get('region_metadata', {})
-            detection_method = region_metadata.get('detection_method', 'unknown')
-            content_type = region_metadata.get('content_type', 'unknown')
-            
-            if not extracted_image:
-                return self._create_error_result('No image data available')
-            
-            # Get reference images for comparison
-            reference_images = self.reference_images.get(predicted_category, [])
-            
-            # Create enhanced vision prompt
-            messages = self._create_enhanced_vision_prompt(
-                extracted_image, reference_images, predicted_category, 
-                detection_method, content_type, target_characteristic
-            )
-            
-            response = self.llm.invoke(messages)
-            result = self._parse_enhanced_vision_response(response.content, section)
-            
-            return result
-            
-        except TimeoutError:
-            return self._create_error_result('Analysis timed out')
+            if os.path.exists(self.learning_params_file):
+                with open(self.learning_params_file) as f:
+                    params = json.load(f)
+                    # Ensure all default keys exist
+                    for key, value in default_params.items():
+                        if key not in params:
+                            params[key] = value
+                    return params
         except Exception as e:
-            return self._create_error_result(f'Error: {str(e)[:100]}')
-        finally:
-            signal.alarm(0)
+            print(f"  ⚠ Error loading parameters: {e}")
+        
+        return default_params
     
-    def _create_enhanced_vision_prompt(self, extracted_image: str, reference_images: List[Dict], 
-                                     category: str, detection_method: str, content_type: str,
-                                     target_characteristic: str) -> List[HumanMessage]:
-        """Create enhanced vision prompt with detailed analysis instructions"""
+    def analyze_extraction_quality(self, document_id: str, debug: bool = False) -> Dict:
+        """Analyze extraction quality with enhanced vision feedback"""
+        extraction_file = f"feedback_data/extraction_{document_id}.json"
         
-        content = [
-            {
-                "type": "text",
-                "text": f"""ENHANCED VISUAL CONTENT ANALYSIS
-
-You are analyzing an extracted visual element for construction document processing.
-
-EXTRACTION DETAILS:
-- Target Characteristic: {target_characteristic.replace('_', ' ').title()}
-- Predicted Category: {category.replace('_', ' ').title()}
-- Detection Method: {detection_method.replace('_', ' ').title()}
-- Content Type: {content_type.replace('_', ' ').title()}
-
-EXTRACTED IMAGE TO ANALYZE:"""
-            },
-            {
-                "type": "image_url",
-                "image_url": {"url": extracted_image}
-            }
-        ]
+        if not os.path.exists(extraction_file):
+            raise FileNotFoundError(f"Extraction file not found: {extraction_file}")
         
-        # Add reference images if available
-        if reference_images:
-            content.append({
-                "type": "text", 
-                "text": f"\nREFERENCE EXAMPLES for {category}:"
-            })
-            
-            for i, ref_img in enumerate(reference_images[:2], 1):
-                content.extend([
-                    {
-                        "type": "text",
-                        "text": f"Reference {i} ({ref_img['filename']}):"
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": ref_img['data_uri']}
-                    }
-                ])
+        with open(extraction_file) as f:
+            extraction_data = json.load(f)
         
-        # Enhanced analysis instructions
-        content.append({
-            "type": "text",
-            "text": f"""
-ANALYSIS TASKS:
-
-1. CONTENT VERIFICATION: Does the extracted image actually contain {target_characteristic.replace('_', ' ')} content?
-
-2. VISUAL QUALITY: 
-   - Is this a diagram, table, chart, or technical drawing?
-   - Is it clearly readable and well-defined?
-   - Does it contain structured visual information?
-
-3. CATEGORY MATCH: Does this match the expected category "{category}"?
-
-4. DETECTION METHOD ASSESSMENT: 
-   - Method used: {detection_method}
-   - Is this appropriate for the content type?
-
-5. IMPROVEMENT SUGGESTIONS: How could extraction be improved?
-
-Respond with JSON only:
-{{
-  "content_verification": {{
-    "contains_target_characteristic": true/false,
-    "confidence_level": "high/medium/low",
-    "reasoning": "brief explanation"
-  }},
-  "visual_quality": {{
-    "is_visual_content": true/false,
-    "content_type": "table/diagram/chart/drawing/text/other",
-    "readability": "excellent/good/fair/poor",
-    "structured_information": true/false
-  }},
-  "category_match": {{
-    "matches_expected_category": true/false,
-    "actual_category_suggestion": "category name or 'unknown'",
-    "similarity_to_references": "high/medium/low/no_references"
-  }},
-  "detection_method_assessment": {{
-    "method_appropriate": true/false,
-    "method_effectiveness": "excellent/good/fair/poor",
-    "suggested_method": "method name or 'current_method_good'"
-  }},
-  "improvement_suggestions": [
-    "suggestion 1",
-    "suggestion 2"
-  ],
-  "overall_assessment": {{
-    "extraction_quality": "excellent/good/fair/poor",
-    "recommended_action": "keep/adjust_parameters/retrain/discard"
-  }}
-}}"""
-        })
+        print(f"🤖 Analyzing extraction quality for {document_id}")
         
-        return [HumanMessage(content=content)]
-    
-    def _parse_enhanced_vision_response(self, response_text: str, section: Dict) -> Dict:
-        """Parse enhanced vision response with fallback handling"""
-        try:
-            import re
-            json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-            if json_match:
-                parsed_response = json.loads(json_match.group())
-                
-                # Add section metadata to response
-                parsed_response['original_section_metadata'] = section.get('region_metadata', {})
-                parsed_response['original_confidence'] = section.get('confidence', 0)
-                
-                return parsed_response
-        except Exception as e:
-            pass
-        
-        # Enhanced fallback parsing
-        lower_response = response_text.lower()
-        
-        return {
-            'content_verification': {
-                'contains_target_characteristic': any(word in lower_response for word in ['yes', 'true', 'contains', 'matches']),
-                'confidence_level': 'medium',
-                'reasoning': 'Parsed from unstructured response'
-            },
-            'visual_quality': {
-                'is_visual_content': any(word in lower_response for word in ['diagram', 'table', 'chart', 'drawing', 'visual']),
-                'content_type': 'visual' if 'visual' in lower_response else 'unknown',
-                'readability': 'fair',
-                'structured_information': 'structure' in lower_response
-            },
-            'category_match': {
-                'matches_expected_category': 'match' in lower_response,
-                'actual_category_suggestion': 'unknown',
-                'similarity_to_references': 'medium'
-            },
-            'detection_method_assessment': {
-                'method_appropriate': True,
-                'method_effectiveness': 'fair',
-                'suggested_method': 'current_method_good'
-            },
-            'improvement_suggestions': ['Consider improving image quality', 'Review training data'],
-            'overall_assessment': {
-                'extraction_quality': 'fair',
-                'recommended_action': 'keep'
-            },
-            'parsing_note': 'Fallback parsing used due to response format issues'
+        # Enhanced analysis
+        analysis_results = {
+            'document_id': document_id,
+            'timestamp': datetime.now().isoformat(),
+            'analysis_method': 'enhanced_vision_feedback',
+            'extraction_summary': self._analyze_extraction_summary(extraction_data),
+            'vision_analysis_summary': {},
+            'parameter_recommendations': {},
+            'quality_metrics': {}
         }
-    
-    def _create_error_result(self, error_message: str) -> Dict:
-        """Create standardized error result"""
-        return {
-            'content_verification': {
-                'contains_target_characteristic': False,
-                'confidence_level': 'low',
-                'reasoning': error_message
-            },
-            'visual_quality': {
-                'is_visual_content': False,
-                'content_type': 'error',
-                'readability': 'poor',
-                'structured_information': False
-            },
-            'category_match': {
-                'matches_expected_category': False,
-                'actual_category_suggestion': 'unknown',
-                'similarity_to_references': 'low'
-            },
-            'detection_method_assessment': {
-                'method_appropriate': False,
-                'method_effectiveness': 'poor',
-                'suggested_method': 'unknown'
-            },
-            'improvement_suggestions': ['Resolve analysis error'],
-            'overall_assessment': {
-                'extraction_quality': 'poor',
-                'recommended_action': 'discard'
-            },
-            'error_message': error_message
-        }
-    
-    def _generate_enhanced_analysis(self, extraction_data: Dict, vision_results: List[Dict], 
-                                  current_params: Dict, debug: bool) -> Dict:
-        """Generate comprehensive enhanced analysis"""
-        total_analyzed = len(vision_results)
         
-        if total_analyzed == 0:
-            return self._enhanced_fallback_analysis(extraction_data, debug)
-        
-        # Analyze vision results
-        analysis_metrics = self._calculate_enhanced_metrics(vision_results)
+        # Vision analysis of extracted items
+        if self.azure_client:
+            vision_results = self._run_vision_analysis(extraction_data, debug)
+            analysis_results['vision_analysis_summary'] = vision_results
+        else:
+            # Fallback analysis without vision
+            fallback_results = self._run_fallback_analysis(extraction_data, debug)
+            analysis_results['vision_analysis_summary'] = fallback_results
         
         # Generate parameter recommendations
-        param_recommendations = self._generate_enhanced_parameter_recommendations(
-            extraction_data, analysis_metrics, current_params, debug
+        recommendations = self._generate_parameter_recommendations(
+            extraction_data, analysis_results['vision_analysis_summary'], debug
+        )
+        analysis_results['parameter_recommendations'] = recommendations
+        
+        # Calculate quality metrics
+        analysis_results['quality_metrics'] = self._calculate_quality_metrics(
+            extraction_data, analysis_results['vision_analysis_summary']
         )
         
-        print(f"  📈 Enhanced Analysis Results:")
-        print(f"    Accuracy: {analysis_metrics['accuracy_rate']:.1%}")
-        print(f"    Visual content rate: {analysis_metrics['visual_content_rate']:.1%}")
-        print(f"    Category match rate: {analysis_metrics['category_match_rate']:.1%}")
+        # Log analysis results
+        self._log_feedback_analysis(analysis_results)
+        
+        if debug:
+            print(f"  Analysis complete - quality metrics calculated")
+        
+        return analysis_results
+    
+    def _analyze_extraction_summary(self, extraction_data: Dict) -> Dict:
+        """Analyze basic extraction statistics"""
+        summary = extraction_data.get('extraction_summary', {})
+        sections = extraction_data.get('extracted_sections', [])
         
         return {
-            'document_id': extraction_data.get('document_id', 'unknown'),
-            'timestamp': datetime.now().isoformat(),
-            'enhanced_vision_analysis': {
-                'total_items_analyzed': total_analyzed,
-                'accuracy_metrics': analysis_metrics,
-                'visual_quality_assessment': self._assess_visual_quality(vision_results),
-                'detection_method_effectiveness': self._assess_detection_methods(vision_results),
-                'category_matching_performance': self._assess_category_matching(vision_results)
-            },
-            'parameter_recommendations': param_recommendations,
-            'llm_available': True,
-            'llm_actually_used': True,
-            'analysis_method': 'enhanced_vision_analysis',
-            'reference_images_used': sum(len(imgs) for imgs in self.reference_images.values()),
-            'analysis_version': '2.0_enhanced'
+            'total_items': len(sections),
+            'pages_processed': summary.get('pages_processed', 0),
+            'visual_regions_analyzed': summary.get('visual_regions_analyzed', 0),
+            'avg_confidence': summary.get('avg_confidence', 0),
+            'high_confidence_items': summary.get('high_confidence_items', 0),
+            'extraction_rate': summary.get('extraction_rate_per_page', 0),
+            'detection_methods': summary.get('detection_method_breakdown', {}),
+            'content_types': summary.get('content_type_breakdown', {})
         }
     
-    def _calculate_fallback_metrics(self, sections: List[Dict]) -> Dict:
-        """Calculate metrics using only metadata (no vision)"""
-        if not sections:
-            return {'total_items': 0}
+    def _run_vision_analysis(self, extraction_data: Dict, debug: bool = False) -> Dict:
+        """Run Azure OpenAI vision analysis on extracted items"""
+        sections = extraction_data.get('extracted_sections', [])
+        characteristic = extraction_data.get('target_characteristic', 'unknown')
         
-        total = len(sections)
+        if not sections:
+            return {
+                'total_items_analyzed': 0,
+                'vision_available': True,
+                'analysis_status': 'no_items_to_analyze'
+            }
+        
+        print(f"  🔍 Running Azure vision analysis on {len(sections)} items...")
+        
+        # Analyze up to 10 items to avoid token limits
+        items_to_analyze = sections[:10]
+        vision_results = []
+        
+        for i, section in enumerate(items_to_analyze):
+            if debug:
+                print(f"    Analyzing item {i+1}/{len(items_to_analyze)}...")
+            
+            try:
+                # Get image data
+                data_uri = section.get('data_uri', '')
+                if not data_uri or not data_uri.startswith('data:image'):
+                    continue
+                
+                # Create vision analysis prompt
+                prompt = self._create_vision_analysis_prompt(section, characteristic)
+                
+                # Prepare message with image
+                message_content = [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": data_uri}}
+                ]
+                
+                message = HumanMessage(content=message_content)
+                
+                # Get analysis from Azure OpenAI
+                response = self.azure_client.invoke([message])
+                analysis_text = response.content
+                
+                # Parse analysis results
+                analysis = self._parse_vision_analysis(analysis_text, section)
+                analysis['item_index'] = i
+                vision_results.append(analysis)
+                
+                if debug:
+                    print(f"      ✓ Item {i+1}: {analysis.get('quality_assessment', 'analyzed')}")
+                
+                # Rate limiting
+                time.sleep(0.5)
+                
+            except Exception as e:
+                if debug:
+                    print(f"      ❌ Error analyzing item {i+1}: {e}")
+                vision_results.append({
+                    'item_index': i,
+                    'error': str(e),
+                    'quality_assessment': 'error'
+                })
+        
+        # Compile vision analysis summary
+        return self._compile_vision_summary(vision_results, len(sections))
+    
+    def _create_vision_analysis_prompt(self, section: Dict, characteristic: str) -> str:
+        """Create detailed vision analysis prompt for Azure-first extractions"""
+        content_type = section.get('region_metadata', {}).get('content_type', 'unknown')
+        confidence = section.get('confidence', 0)
+        detection_method = section.get('region_metadata', {}).get('detection_method', 'unknown')
+        azure_description = section.get('region_metadata', {}).get('azure_description', '')
+        
+        prompt = f"""
+Analyze this extracted construction document image for {characteristic.replace('_', ' ')} content.
+
+CONTEXT:
+- Target characteristic: {characteristic.replace('_', ' ').title()}
+- Detection method: {detection_method}
+- System confidence: {confidence:.3f}
+- Azure description: {azure_description}
+- Source: Construction technical document
+
+ANALYSIS CRITERIA:
+
+1. CONTENT RELEVANCE (Critical):
+   - Does this image contain {characteristic.replace('_', ' ')} information?
+   - Is it a technical diagram, table, or specification relevant to {characteristic}?
+   - How well does it match the target characteristic?
+   - Rate relevance: HIGHLY_RELEVANT, SOMEWHAT_RELEVANT, NOT_RELEVANT
+
+2. VISUAL QUALITY (Important):
+   - Is the image clear and readable?
+   - Can technical details be discerned?
+   - Is the extraction well-bounded (not cut off)?
+   - Rate quality: EXCELLENT, GOOD, FAIR, POOR
+
+3. CONSTRUCTION AUTHENTICITY (Essential):
+   - Is this legitimate construction/engineering content?
+   - Are there technical drawings, specifications, or data relevant to construction?
+   - Is this clearly NOT a logo, badge, header, or decorative element?
+   - Rate authenticity: CLEARLY_CONSTRUCTION, LIKELY_CONSTRUCTION, UNCERTAIN, NOT_CONSTRUCTION
+
+4. EXTRACTION ACCURACY (Critical):
+   - Was the right visual content extracted?
+   - Is the extracted region appropriately sized and positioned?
+   - Does it contain the complete relevant information?
+   - Rate accuracy: EXCELLENT, GOOD, FAIR, POOR
+
+5. TRAINING DATA ALIGNMENT:
+   - How well does this match typical {characteristic.replace('_', ' ')} content?
+   - Would this be a good training example for {characteristic}?
+   - Rate alignment: PERFECT_MATCH, GOOD_MATCH, PARTIAL_MATCH, NO_MATCH
+
+Provide your analysis in this format:
+RELEVANCE: [rating]
+QUALITY: [rating]  
+CONSTRUCTION: [rating]
+ACCURACY: [rating]
+TRAINING_ALIGNMENT: [rating]
+CONFIDENCE: [0.0-1.0]
+NOTES: [Brief explanation focusing on why this does/doesn't match {characteristic}]
+"""
+        return prompt
+    
+    def _parse_vision_analysis(self, analysis_text: str, section: Dict) -> Dict:
+        """Parse vision analysis response into structured data"""
+        analysis = {
+            'relevance': 'UNCERTAIN',
+            'quality': 'FAIR',
+            'construction': 'UNCERTAIN', 
+            'accuracy': 'FAIR',
+            'confidence': 0.5,
+            'notes': analysis_text[:200],  # First 200 chars as notes
+            'full_analysis': analysis_text
+        }
+        
+        try:
+            lines = analysis_text.upper().split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                
+                if line.startswith('RELEVANCE:'):
+                    analysis['relevance'] = line.split(':', 1)[1].strip()
+                elif line.startswith('QUALITY:'):
+                    analysis['quality'] = line.split(':', 1)[1].strip()
+                elif line.startswith('CONSTRUCTION:'):
+                    analysis['construction'] = line.split(':', 1)[1].strip()
+                elif line.startswith('ACCURACY:'):
+                    analysis['accuracy'] = line.split(':', 1)[1].strip()
+                elif line.startswith('CONFIDENCE:'):
+                    conf_str = line.split(':', 1)[1].strip()
+                    try:
+                        analysis['confidence'] = float(conf_str)
+                    except:
+                        analysis['confidence'] = 0.5
+                elif line.startswith('NOTES:'):
+                    analysis['notes'] = line.split(':', 1)[1].strip()[:300]
+        
+        except Exception as e:
+            analysis['parsing_error'] = str(e)
+        
+        return analysis
+    
+    def _compile_vision_summary(self, vision_results: List[Dict], total_items: int) -> Dict:
+        """Compile vision analysis results into summary"""
+        if not vision_results:
+            return {
+                'total_items_analyzed': 0,
+                'vision_available': True,
+                'analysis_status': 'no_successful_analysis'
+            }
+        
+        # Count quality assessments
+        relevance_counts = {}
+        quality_counts = {}
+        construction_counts = {}
+        accuracy_counts = {}
+        confidences = []
+        
+        successful_analyses = [r for r in vision_results if 'error' not in r]
+        
+        for result in successful_analyses:
+            relevance = result.get('relevance', 'UNCERTAIN')
+            quality = result.get('quality', 'FAIR')
+            construction = result.get('construction', 'UNCERTAIN')
+            accuracy = result.get('accuracy', 'FAIR')
+            confidence = result.get('confidence', 0.5)
+            
+            relevance_counts[relevance] = relevance_counts.get(relevance, 0) + 1
+            quality_counts[quality] = quality_counts.get(quality, 0) + 1
+            construction_counts[construction] = construction_counts.get(construction, 0) + 1
+            accuracy_counts[accuracy] = accuracy_counts.get(accuracy, 0) + 1
+            confidences.append(confidence)
+        
+        # Calculate metrics
+        total_analyzed = len(successful_analyses)
+        
+        # Relevance metrics
+        highly_relevant = relevance_counts.get('HIGHLY_RELEVANT', 0)
+        somewhat_relevant = relevance_counts.get('SOMEWHAT_RELEVANT', 0)
+        not_relevant = relevance_counts.get('NOT_RELEVANT', 0)
+        
+        relevance_rate = (highly_relevant + somewhat_relevant) / max(1, total_analyzed)
+        
+        # Construction authenticity metrics  
+        clearly_construction = construction_counts.get('CLEARLY_CONSTRUCTION', 0)
+        likely_construction = construction_counts.get('LIKELY_CONSTRUCTION', 0)
+        not_construction = construction_counts.get('NOT_CONSTRUCTION', 0)
+        
+        construction_rate = (clearly_construction + likely_construction) / max(1, total_analyzed)
+        
+        # Quality metrics
+        excellent_quality = quality_counts.get('EXCELLENT', 0)
+        good_quality = quality_counts.get('GOOD', 0)
+        poor_quality = quality_counts.get('POOR', 0)
+        
+        quality_rate = (excellent_quality + good_quality) / max(1, total_analyzed)
+        
+        # Accuracy metrics
+        excellent_accuracy = accuracy_counts.get('EXCELLENT', 0)
+        good_accuracy = accuracy_counts.get('GOOD', 0)
+        poor_accuracy = accuracy_counts.get('POOR', 0)
+        
+        accuracy_rate = (excellent_accuracy + good_accuracy) / max(1, total_analyzed)
+        
+        return {
+            'total_items_analyzed': total_analyzed,
+            'total_items_in_extraction': total_items,
+            'vision_available': True,
+            'analysis_status': 'completed',
+            'avg_confidence': sum(confidences) / len(confidences) if confidences else 0.5,
+            'relevance_rate': relevance_rate,
+            'construction_authenticity_rate': construction_rate,
+            'visual_quality_rate': quality_rate,
+            'extraction_accuracy_rate': accuracy_rate,
+            'detailed_counts': {
+                'relevance': relevance_counts,
+                'quality': quality_counts,
+                'construction': construction_counts,
+                'accuracy': accuracy_counts
+            },
+            'errors': len(vision_results) - total_analyzed
+        }
+    
+    def _run_fallback_analysis(self, extraction_data: Dict, debug: bool = False) -> Dict:
+        """Fallback analysis when Azure OpenAI is not available"""
+        sections = extraction_data.get('extracted_sections', [])
+        
+        if debug:
+            print(f"  📊 Running fallback analysis on {len(sections)} items...")
+        
+        # Analyze based on metadata and confidence scores
+        high_confidence = sum(1 for s in sections if s.get('confidence', 0) > 0.6)
+        medium_confidence = sum(1 for s in sections if 0.4 <= s.get('confidence', 0) <= 0.6)
+        low_confidence = sum(1 for s in sections if s.get('confidence', 0) < 0.4)
         
         # Analyze detection methods
         detection_methods = {}
-        content_types = {}
-        confidence_levels = []
-        
         for section in sections:
-            metadata = section.get('region_metadata', {})
-            
-            # Detection method analysis
-            method = metadata.get('detection_method', 'unknown')
+            method = section.get('region_metadata', {}).get('detection_method', 'unknown')
             detection_methods[method] = detection_methods.get(method, 0) + 1
-            
-            # Content type analysis
-            content_type = metadata.get('content_type', 'unknown')
-            content_types[content_type] = content_types.get(content_type, 0) + 1
-            
-            # Confidence analysis
-            confidence = section.get('confidence', 0)
-            confidence_levels.append(confidence)
         
-        avg_confidence = sum(confidence_levels) / len(confidence_levels) if confidence_levels else 0
-        high_confidence_count = sum(1 for c in confidence_levels if c > 0.6)
-        
-        # Estimate quality based on detection methods and content types
-        visual_content_estimate = (
-            content_types.get('table', 0) + 
-            content_types.get('diagram', 0)
-        ) / total if total > 0 else 0
+        # Estimate quality based on confidence and detection methods
+        total_items = len(sections)
+        estimated_accuracy = (high_confidence * 1.0 + medium_confidence * 0.7 + low_confidence * 0.4) / max(1, total_items)
         
         return {
-            'total_items': total,
-            'detection_method_breakdown': detection_methods,
-            'content_type_breakdown': content_types,
-            'average_confidence': avg_confidence,
-            'high_confidence_items': high_confidence_count,
-            'estimated_visual_content_rate': visual_content_estimate,
+            'total_items_analyzed': total_items,
+            'vision_available': False,
+            'analysis_status': 'fallback_analysis',
+            'estimated_accuracy_rate': estimated_accuracy,
             'confidence_distribution': {
-                'high': sum(1 for c in confidence_levels if c > 0.6),
-                'medium': sum(1 for c in confidence_levels if 0.4 <= c <= 0.6),
-                'low': sum(1 for c in confidence_levels if c < 0.4)
-            }
-        }
-    
-    def _fallback_parameter_recommendations(self, metrics: Dict, current_params: Dict) -> Dict:
-        """Enhanced fallback parameter recommendations"""
-        recommendations = {}
-        reasoning = []
-        
-        total = metrics.get('total_items', 0)
-        avg_confidence = metrics.get('average_confidence', 0)
-        visual_content_rate = metrics.get('estimated_visual_content_rate', 0)
-        high_conf_count = metrics.get('high_confidence_items', 0)
-        
-        if total == 0:
-            recommendations['confidence_threshold'] = 0.4
-            recommendations['min_region_size'] = 8000
-            reasoning.append("No extractions found - reducing barriers significantly")
-        
-        elif total < 3:
-            if avg_confidence > 0.6:
-                recommendations['confidence_threshold'] = 0.5
-                reasoning.append(f"Few but high-quality extractions ({total}) - slightly reducing threshold")
-            else:
-                recommendations['confidence_threshold'] = 0.45
-                recommendations['min_region_size'] = 8000
-                reasoning.append(f"Very few extractions ({total}) with low confidence - reducing barriers")
-        
-        elif total > 25:
-            recommendations['confidence_threshold'] = 0.65
-            recommendations['min_region_size'] = 12000
-            reasoning.append(f"High extraction count ({total}) - increasing selectivity")
-        
-        elif visual_content_rate < 0.3:
-            recommendations['confidence_threshold'] = 0.6
-            reasoning.append(f"Low estimated visual content rate ({visual_content_rate:.1%}) - being more selective")
-        
-        elif high_conf_count / total < 0.3 if total > 0 else False:
-            recommendations['confidence_threshold'] = 0.55
-            reasoning.append(f"Low proportion of high-confidence items - moderate increase in threshold")
-        
-        return {
-            'adjustments': recommendations,
-            'reasoning': '; '.join(reasoning) if reasoning else 'Current parameters appear reasonable based on metadata analysis',
-            'fallback_analysis_based_on': {
-                'total_items': total,
-                'average_confidence': avg_confidence,
-                'estimated_visual_content_rate': visual_content_rate,
-                'high_confidence_proportion': high_conf_count / total if total > 0 else 0
-            }
-        }
-    
-    def _timeout_fallback_analysis(self, extraction_data: Dict) -> Dict:
-        """Analysis when timeout occurs"""
-        return {
-            'document_id': extraction_data.get('document_id', 'unknown'),
-            'timestamp': datetime.now().isoformat(),
-            'timeout_analysis': True,
-            'parameter_recommendations': {
-                'adjustments': {'confidence_threshold': 0.6},
-                'reasoning': 'Enhanced analysis timed out - using safe defaults'
+                'high': high_confidence,
+                'medium': medium_confidence,
+                'low': low_confidence
             },
-            'llm_available': True,
-            'llm_actually_used': False,
-            'analysis_method': 'timeout_fallback',
-            'analysis_version': '2.0_timeout'
+            'detection_method_analysis': detection_methods,
+            'notes': 'Analysis based on confidence scores and metadata (Azure OpenAI not available)'
         }
     
-    def _error_fallback_analysis(self, extraction_data: Dict) -> Dict:
-        """Analysis when error occurs"""
-        return {
-            'document_id': extraction_data.get('document_id', 'unknown'),
-            'timestamp': datetime.now().isoformat(),
-            'error_analysis': True,
-            'parameter_recommendations': {
-                'adjustments': {},
-                'reasoning': 'Enhanced analysis failed - no changes recommended'
-            },
-            'llm_available': False,
-            'llm_actually_used': False,
-            'analysis_method': 'error_fallback',
-            'analysis_version': '2.0_error'
+    def _generate_parameter_recommendations(self, extraction_data: Dict, vision_analysis: Dict, debug: bool = False) -> Dict:
+        """Generate intelligent parameter recommendations for Azure-first system"""
+        if debug:
+            print(f"  Generating Azure-optimized parameter recommendations...")
+        
+        recommendations = {
+            'adjustments': {},
+            'reasoning': '',
+            'priority': 'medium',
+            'confidence': 0.7
         }
-    
-    def apply_enhanced_recommendations(self, analysis_result: Dict, debug: bool = False) -> bool:
-        """Apply enhanced parameter recommendations safely"""
-        recommendations = analysis_result.get('parameter_recommendations', {})
-        adjustments = recommendations.get('adjustments', {})
         
-        if not adjustments:
-            print("  ℹ️ No parameter adjustments recommended by enhanced analysis")
-            return True
+        # Get extraction performance
+        total_items = len(extraction_data.get('extracted_sections', []))
+        azure_calls = extraction_data.get('extraction_summary', {}).get('azure_api_calls', 0)
         
-        print(f"  ⚙️ Applying {len(adjustments)} enhanced parameter adjustments...")
+        reasoning_parts = []
         
-        # Load current parameters
-        param_file = "learning_parameters.json"
-        try:
-            if os.path.exists(param_file):
-                with open(param_file) as f:
-                    current_params = json.load(f)
+        # No extractions case - common with restrictive Azure prompts
+        if total_items == 0:
+            if azure_calls > 0:
+                # Azure was used but found nothing - prompts might be too restrictive
+                recommendations['adjustments']['azure_prompt_mode'] = 'generous'
+                recommendations['adjustments']['confidence_threshold'] = 0.3
+                recommendations['adjustments']['region_selection_mode'] = 'inclusive'
+                reasoning_parts.append("No extractions with Azure - switching to generous mode")
+                recommendations['priority'] = 'critical'
             else:
-                current_params = {
-                    'confidence_threshold': 0.5,
-                    'min_region_size': 10000,
-                    'similarity_threshold': 0.6
-                }
-        except Exception as e:
-            print(f"    ⚠ Error loading parameters: {e}")
-            return False
+                # Fallback mode
+                recommendations['adjustments']['min_region_size'] = 8000
+                recommendations['adjustments']['confidence_threshold'] = 0.25
+                reasoning_parts.append("No extractions in fallback mode - lowering thresholds")
+                recommendations['priority'] = 'high'
         
-        # Apply enhanced adjustments with improved bounds
-        changes_made = []
-        for param_name, new_value in adjustments.items():
-            try:
-                # Enhanced validation bounds
-                if param_name == 'confidence_threshold':
-                    new_value = max(0.25, min(0.85, float(new_value)))  # Wider range
-                elif param_name == 'min_region_size':
-                    new_value = max(5000, min(30000, int(new_value)))   # Wider range
-                elif param_name == 'similarity_threshold':
-                    new_value = max(0.3, min(0.9, float(new_value)))    # Wider range
-                
-                old_value = current_params.get(param_name, 'N/A')
-                if old_value != new_value:
-                    current_params[param_name] = new_value
-                    changes_made.append(f"{param_name}: {old_value} → {new_value}")
-                    
-                    if debug:
-                        print(f"      ✓ {param_name}: {old_value} → {new_value}")
-                        
-            except Exception as e:
-                print(f"      ✗ Invalid value for {param_name}: {e}")
+        # Low extraction rate (less than 1 per page)
+        elif azure_calls > 0:
+            pages_processed = extraction_data.get('pages_processed', 1)
+            extraction_rate = total_items / pages_processed
+            
+            if extraction_rate < 1.0:
+                recommendations['adjustments']['azure_prompt_mode'] = 'inclusive'
+                recommendations['adjustments']['confidence_threshold'] = 0.4
+                reasoning_parts.append(f"Low extraction rate ({extraction_rate:.1f}/page) - being more inclusive")
+                recommendations['priority'] = 'high'
+            elif extraction_rate > 5.0:
+                recommendations['adjustments']['azure_prompt_mode'] = 'selective'
+                recommendations['adjustments']['confidence_threshold'] = 0.7
+                reasoning_parts.append(f"High extraction rate ({extraction_rate:.1f}/page) - being more selective")
         
-        # Save parameters with enhanced metadata
-        if changes_made:
-            try:
-                # Add metadata about the enhancement
-                current_params['_metadata'] = {
-                    'last_updated': datetime.now().isoformat(),
-                    'updated_by': 'enhanced_vision_feedback',
-                    'analysis_version': analysis_result.get('analysis_version', '2.0'),
-                    'changes_applied': len(changes_made)
-                }
-                
-                with open(param_file, 'w') as f:
-                    json.dump(current_params, f, indent=2)
-                print(f"    ✅ Applied {len(changes_made)} enhanced parameter changes")
-                
-                # Show reasoning if available
-                reasoning = recommendations.get('reasoning', '')
-                if reasoning and debug:
-                    print(f"    💡 Reasoning: {reasoning}")
-                
-                return True
-            except Exception as e:
-                print(f"    ❌ Error saving enhanced parameters: {e}")
-                return False
+        # Vision analysis feedback (if available)
+        if vision_analysis.get('vision_available', False):
+            relevance_rate = vision_analysis.get('relevance_rate', 0)
+            accuracy_rate = vision_analysis.get('extraction_accuracy_rate', 0)
+            
+            if relevance_rate < 0.4:
+                recommendations['adjustments']['training_data_integration'] = 'enhanced'
+                recommendations['adjustments']['azure_prompt_mode'] = 'training_focused'
+                reasoning_parts.append(f"Low relevance ({relevance_rate:.1%}) - focusing on training data alignment")
+                recommendations['priority'] = 'critical'
+            
+            if accuracy_rate < 0.5:
+                recommendations['adjustments']['coordinate_parsing'] = 'flexible'
+                recommendations['adjustments']['region_validation'] = 'lenient'
+                reasoning_parts.append(f"Low accuracy ({accuracy_rate:.1%}) - improving region handling")
+        
+        # Training data alignment
+        characteristic = extraction_data.get('target_characteristic', '')
+        if characteristic and total_items == 0:
+            recommendations['adjustments']['characteristic_terms'] = 'expanded'
+            recommendations['adjustments']['visual_pattern_matching'] = 'flexible'
+            reasoning_parts.append(f"Zero extractions for {characteristic} - expanding search terms")
+        
+        # Set reasoning
+        recommendations['reasoning'] = '; '.join(reasoning_parts) if reasoning_parts else 'System performing well - no major adjustments needed'
+        
+        # Set confidence based on available data
+        if azure_calls > 0 and vision_analysis.get('vision_available'):
+            recommendations['confidence'] = 0.9
+        elif azure_calls > 0:
+            recommendations['confidence'] = 0.8
         else:
-            print("    ℹ️ No valid changes to apply from enhanced analysis")
-            return True
-    
-    def save_enhanced_analysis_log(self, analysis_result: Dict):
-        """Save enhanced analysis log with additional metadata"""
-        log_file = "feedback_log.json"
+            recommendations['confidence'] = 0.6
         
-        try:
-            if os.path.exists(log_file):
-                with open(log_file) as f:
-                    logs = json.load(f)
+        if debug and recommendations['adjustments']:
+            print(f"    Recommended {len(recommendations['adjustments'])} Azure-specific adjustments")
+        
+        return recommendations = vision_analysis.get('estimated_accuracy_rate', 0.5)
+            
+            if estimated_accuracy < 0.4:
+                recommendations['adjustments']['confidence_threshold'] = max(0.25, self.current_params['confidence_threshold'] - 0.1)
+                recommendations['reasoning'] = f"Lowered confidence threshold due to low estimated accuracy ({estimated_accuracy:.1%})"
+                recommendations['priority'] = 'high'
+            elif estimated_accuracy > 0.8:
+                recommendations['adjustments']['confidence_threshold'] = min(0.6, self.current_params['confidence_threshold'] + 0.05)
+                recommendations['reasoning'] = f"Raised confidence threshold due to high estimated accuracy ({estimated_accuracy:.1%})"
             else:
-                logs = []
+                recommendations['reasoning'] = "No adjustments recommended based on fallback analysis"
+        
+        # No extractions case
+        if total_items == 0:
+            recommendations['adjustments']['confidence_threshold'] = max(0.2, self.current_params['confidence_threshold'] - 0.15)
+            recommendations['adjustments']['similarity_threshold'] = max(0.2, self.current_params['similarity_threshold'] - 0.15)
+            recommendations['adjustments']['construction_bias'] = min(3.0, self.current_params['construction_bias'] + 0.5)
+            recommendations['reasoning'] = "Significantly lowered thresholds due to no extractions"
+            recommendations['priority'] = 'critical'
+            recommendations['confidence'] = 0.8
+        
+        if debug and recommendations['adjustments']:
+            print(f"    Recommended adjustments: {len(recommendations['adjustments'])} parameters")
+        
+        return recommendations
+    
+    def _calculate_quality_metrics(self, extraction_data: Dict, vision_analysis: Dict) -> Dict:
+        """Calculate comprehensive quality metrics"""
+        sections = extraction_data.get('extracted_sections', [])
+        summary = extraction_data.get('extraction_summary', {})
+        
+        metrics = {
+            'extraction_efficiency': 0,
+            'confidence_quality': 0,
+            'detection_diversity': 0,
+            'overall_quality_score': 0
+        }
+        
+        if not sections:
+            return metrics
+        
+        # Extraction efficiency (items per page)
+        pages_processed = summary.get('pages_processed', 1)
+        extraction_rate = len(sections) / pages_processed
+        metrics['extraction_efficiency'] = min(1.0, extraction_rate / 2)  # Normalize to expected 2 items per page
+        
+        # Confidence quality
+        confidences = [s.get('confidence', 0) for s in sections]
+        avg_confidence = sum(confidences) / len(confidences)
+        metrics['confidence_quality'] = avg_confidence
+        
+        # Detection method diversity
+        detection_methods = set()
+        for section in sections:
+            method = section.get('region_metadata', {}).get('detection_method', 'unknown')
+            detection_methods.add(method)
+        
+        metrics['detection_diversity'] = min(1.0, len(detection_methods) / 3)  # Normalize to 3 methods
+        
+        # Overall quality score
+        if vision_analysis.get('vision_available', False):
+            # Use vision analysis for overall score
+            accuracy_rate = vision_analysis.get('extraction_accuracy_rate', 0.5)
+            construction_rate = vision_analysis.get('construction_authenticity_rate', 0.5)
+            relevance_rate = vision_analysis.get('relevance_rate', 0.5)
             
-            # Add enhanced metadata
-            analysis_result['log_metadata'] = {
-                'logged_at': datetime.now().isoformat(),
-                'log_version': '2.0_enhanced',
-                'analysis_features_used': [
-                    'enhanced_vision_prompts',
-                    'multi_metric_analysis', 
-                    'intelligent_item_selection',
-                    'detection_method_assessment'
-                ]
-            }
+            metrics['overall_quality_score'] = (
+                accuracy_rate * 0.4 +           # 40% weight on accuracy
+                construction_rate * 0.3 +       # 30% weight on construction authenticity  
+                relevance_rate * 0.2 +          # 20% weight on relevance
+                metrics['confidence_quality'] * 0.1  # 10% weight on confidence
+            )
+        else:
+            # Fallback scoring
+            estimated_accuracy = vision_analysis.get('estimated_accuracy_rate', 0.5)
+            metrics['overall_quality_score'] = (
+                estimated_accuracy * 0.5 +
+                metrics['confidence_quality'] * 0.3 +
+                metrics['extraction_efficiency'] * 0.2
+            )
+        
+        return metrics
+    
+    def apply_parameter_recommendations(self, document_id: str, debug: bool = False) -> bool:
+        """Apply parameter recommendations from analysis"""
+        try:
+            # Load analysis results
+            feedback_log = self._load_feedback_log()
             
-            logs.append(analysis_result)
+            # Find the latest analysis for this document
+            latest_analysis = None
+            for entry in reversed(feedback_log):
+                if entry.get('document_id') == document_id:
+                    latest_analysis = entry
+                    break
             
-            # Keep only last 25 entries (increased for enhanced analysis)
-            if len(logs) > 25:
-                logs = logs[-25:]
+            if not latest_analysis:
+                print(f"  ❌ No analysis found for {document_id}")
+                return False
             
-            with open(log_file, 'w') as f:
-                json.dump(logs, f, indent=2)
+            recommendations = latest_analysis.get('parameter_recommendations', {})
+            adjustments = recommendations.get('adjustments', {})
+            
+            if not adjustments:
+                print(f"  ℹ️  No parameter adjustments recommended")
+                return True
+            
+            print(f"  🔧 Applying {len(adjustments)} parameter adjustments...")
+            
+            # Apply adjustments to current parameters
+            for param, new_value in adjustments.items():
+                old_value = self.current_params.get(param, 'unknown')
+                self.current_params[param] = new_value
                 
-            print(f"  💾 Enhanced analysis saved to {log_file}")
+                if debug:
+                    print(f"    {param}: {old_value} → {new_value}")
+            
+            # Update timestamp
+            self.current_params['last_updated'] = datetime.now().isoformat()
+            self.current_params['last_analysis_document'] = document_id
+            
+            # Save updated parameters
+            self._save_learning_parameters()
+            
+            print(f"  ✅ Parameter adjustments applied")
+            print(f"      Reasoning: {recommendations.get('reasoning', 'No reasoning provided')}")
+            
+            return True
             
         except Exception as e:
-            print(f"  ⚠ Error saving enhanced analysis log: {e}")
+            print(f"  ❌ Error applying recommendations: {e}")
+            return False
+    
+    def _load_feedback_log(self) -> List[Dict]:
+        """Load feedback log entries"""
+        try:
+            if os.path.exists(self.feedback_log_file):
+                with open(self.feedback_log_file) as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return []
+    
+    def _log_feedback_analysis(self, analysis: Dict):
+        """Log feedback analysis to file"""
+        try:
+            # Load existing log
+            log_entries = self._load_feedback_log()
+            
+            # Add new entry
+            log_entries.append(analysis)
+            
+            # Keep only last 50 entries
+            log_entries = log_entries[-50:]
+            
+            # Save log
+            with open(self.feedback_log_file, 'w') as f:
+                json.dump(log_entries, f, indent=2)
+                
+        except Exception as e:
+            print(f"  ⚠ Error logging analysis: {e}")
+    
+    def _save_learning_parameters(self):
+        """Save learning parameters to file"""
+        try:
+            with open(self.learning_params_file, 'w') as f:
+                json.dump(self.current_params, f, indent=2)
+        except Exception as e:
+            print(f"  ⚠ Error saving parameters: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Enhanced LLM Feedback with Advanced Vision Analysis")
-    parser.add_argument("--analyze-and-apply", help="Analyze document ID and apply enhanced recommendations")
-    parser.add_argument("--test-connection", action="store_true", help="Test Azure OpenAI connection")
-    parser.add_argument("--show-log", action="store_true", help="Show recent enhanced feedback log")
-    parser.add_argument("--debug", action="store_true", help="Enable detailed debug output")
-    parser.add_argument("--analyze-only", help="Run enhanced analysis without applying recommendations")
+    parser = argparse.ArgumentParser(description="Enhanced LLM Feedback System")
+    parser.add_argument("--analyze", help="Analyze extraction quality for document ID")
+    parser.add_argument("--apply", help="Apply recommendations for document ID") 
+    parser.add_argument("--analyze-and-apply", help="Analyze and apply recommendations for document ID")
+    parser.add_argument("--debug", action="store_true", help="Enable debug output")
+    parser.add_argument("--show-params", action="store_true", help="Show current learning parameters")
+    parser.add_argument("--reset-params", action="store_true", help="Reset parameters to defaults")
     
     args = parser.parse_args()
     
-    if args.test_connection:
-        print("🧪 Testing Enhanced Azure OpenAI connection...")
-        analyzer = EnhancedVisionFeedbackAnalyzer()
-        
-        if analyzer.azure_available and analyzer.llm:
-            try:
-                messages = [HumanMessage(content="Test enhanced vision connection")]
-                response = analyzer.llm.invoke(messages)
-                print("✅ Enhanced Azure OpenAI connection successful")
-                print(f"Response length: {len(response.content)} characters")
-                return 0
-            except Exception as e:
-                print(f"❌ Enhanced connection test failed: {e}")
-                return 1
+    if args.show_params:
+        feedback = EnhancedLLMFeedback()
+        print("\n📊 Current Learning Parameters:")
+        for key, value in feedback.current_params.items():
+            if isinstance(value, float):
+                print(f"  {key}: {value:.3f}")
+            else:
+                print(f"  {key}: {value}")
+        return 0
+    
+    if args.reset_params:
+        import os
+        params_file = "learning_parameters.json"
+        if os.path.exists(params_file):
+            os.remove(params_file)
+            print("✅ Learning parameters reset to defaults")
         else:
-            print("❌ Enhanced Azure OpenAI not properly configured")
-            return 1
+            print("ℹ️  No parameters file to reset")
+        return 0
     
-    if args.show_log:
-        try:
-            with open("feedback_log.json") as f:
-                logs = json.load(f)
-            
-            print(f"\n📊 Enhanced Feedback Log ({len(logs)} entries)")
-            print("="*70)
-            
-            for log in logs[-7:]:  # Show last 7
-                timestamp = log.get('timestamp', 'Unknown')
-                doc_id = log.get('document_id', 'Unknown')
-                method = log.get('analysis_method', 'Unknown')
-                version = log.get('analysis_version', 'Unknown')
-                
-                print(f"🕒 {timestamp}")
-                print(f"📄 Document: {doc_id}")
-                print(f"🔍 Method: {method} (v{version})")
-                
-                # Enhanced analysis results
-                if 'enhanced_vision_analysis' in log:
-                    eva = log['enhanced_vision_analysis']
-                    metrics = eva.get('accuracy_metrics', {})
-                    print(f"🎯 Accuracy: {metrics.get('accuracy_rate', 0):.1%}")
-                    print(f"👁️ Visual Content: {metrics.get('visual_content_rate', 0):.1%}")
-                    print(f"🎨 Category Match: {metrics.get('category_match_rate', 0):.1%}")
-                    print(f"⭐ High Quality: {metrics.get('high_quality_rate', 0):.1%}")
-                
-                print("-" * 50)
-            
-            return 0
-            
-        except FileNotFoundError:
-            print("📄 No enhanced feedback log found")
-            return 0
-        except Exception as e:
-            print(f"❌ Error reading enhanced log: {e}")
-            return 1
+    if not any([args.analyze, args.apply, args.analyze_and_apply]):
+        parser.error("One of --analyze, --apply, or --analyze-and-apply is required")
     
-    if args.analyze_and_apply:
-        document_id = args.analyze_and_apply
-        print(f"🔍 Running enhanced vision analysis on document {document_id}...")
+    try:
+        feedback = EnhancedLLMFeedback()
         
-        try:
-            analyzer = EnhancedVisionFeedbackAnalyzer()
+        if args.analyze or args.analyze_and_apply:
+            doc_id = args.analyze or args.analyze_and_apply
+            print(f"🤖 Enhanced Vision Feedback Analysis")
+            print(f"Document ID: {doc_id}")
             
-            # Perform enhanced analysis
-            analysis_result = analyzer.analyze_extraction_with_enhanced_vision(document_id, args.debug)
+            analysis = feedback.analyze_extraction_quality(doc_id, debug=args.debug)
             
-            # Apply enhanced recommendations
-            success = analyzer.apply_enhanced_recommendations(analysis_result, args.debug)
+            # Print summary
+            vision_summary = analysis.get('vision_analysis_summary', {})
+            quality_metrics = analysis.get('quality_metrics', {})
             
-            # Save enhanced analysis log
-            analyzer.save_enhanced_analysis_log(analysis_result)
+            if vision_summary.get('vision_available', False):
+                print(f"\n📊 Vision Analysis Results:")
+                print(f"  Items analyzed: {vision_summary.get('total_items_analyzed', 0)}")
+                print(f"  Accuracy: {vision_summary.get('extraction_accuracy_rate', 0):.1%}")
+                print(f"  Construction authenticity: {vision_summary.get('construction_authenticity_rate', 0):.1%}")
+                print(f"  Relevance: {vision_summary.get('relevance_rate', 0):.1%}")
+                print(f"  Visual quality: {vision_summary.get('visual_quality_rate', 0):.1%}")
+            else:
+                print(f"\n📊 Fallback Analysis Results:")
+                print(f"  Items analyzed: {vision_summary.get('total_items_analyzed', 0)}")
+                print(f"  Estimated accuracy: {vision_summary.get('estimated_accuracy_rate', 0):.1%}")
+            
+            print(f"\n🎯 Quality Metrics:")
+            print(f"  Overall quality score: {quality_metrics.get('overall_quality_score', 0):.1%}")
+            print(f"  Confidence quality: {quality_metrics.get('confidence_quality', 0):.3f}")
+            print(f"  Extraction efficiency: {quality_metrics.get('extraction_efficiency', 0):.3f}")
+            
+            # Show recommendations
+            recommendations = analysis.get('parameter_recommendations', {})
+            adjustments = recommendations.get('adjustments', {})
+            
+            if adjustments:
+                print(f"\n🔧 Parameter Recommendations ({recommendations.get('priority', 'medium')} priority):")
+                for param, value in adjustments.items():
+                    print(f"  {param}: {value}")
+                print(f"  Reasoning: {recommendations.get('reasoning', 'No reasoning provided')}")
+            else:
+                print(f"\nℹ️  No parameter adjustments recommended")
+        
+        if args.apply or args.analyze_and_apply:
+            doc_id = args.apply or args.analyze_and_apply
+            print(f"\n🔧 Applying Parameter Recommendations")
+            
+            success = feedback.apply_parameter_recommendations(doc_id, debug=args.debug)
             
             if success:
-                print("✅ Enhanced vision-based feedback analysis completed")
-                return 0
+                print(f"✅ Recommendations applied successfully")
             else:
-                print("⚠️ Enhanced analysis completed with some issues")
+                print(f"❌ Failed to apply recommendations")
                 return 1
-                
-        except Exception as e:
-            print(f"❌ Enhanced analysis failed: {e}")
-            if args.debug:
-                import traceback
-                traceback.print_exc()
-            return 1
-    
-    if args.analyze_only:
-        document_id = args.analyze_only
-        print(f"🔍 Running enhanced analysis only (no parameter changes) on document {document_id}...")
         
-        try:
-            analyzer = EnhancedVisionFeedbackAnalyzer()
-            
-            # Perform enhanced analysis only
-            analysis_result = analyzer.analyze_extraction_with_enhanced_vision(document_id, args.debug)
-            
-            # Save analysis log but don't apply recommendations
-            analyzer.save_enhanced_analysis_log(analysis_result)
-            
-            print("✅ Enhanced vision analysis completed (no parameters changed)")
-            
-            # Show key results
-            if 'enhanced_vision_analysis' in analysis_result:
-                eva = analysis_result['enhanced_vision_analysis']
-                metrics = eva.get('accuracy_metrics', {})
-                print(f"📊 Key Results:")
-                print(f"  Accuracy: {metrics.get('accuracy_rate', 0):.1%}")
-                print(f"  Visual Content Rate: {metrics.get('visual_content_rate', 0):.1%}")
-                print(f"  Category Match Rate: {metrics.get('category_match_rate', 0):.1%}")
-            
-            return 0
-                
-        except Exception as e:
-            print(f"❌ Enhanced analysis failed: {e}")
-            if args.debug:
-                import traceback
-                traceback.print_exc()
-            return 1
-    
-    print("❓ No action specified. Use --help for enhanced options.")
-    return 1
+        return 0
+        
+    except FileNotFoundError as e:
+        print(f"❌ File not found: {e}")
+        print(f"Make sure to run extraction first:")
+        print(f"  python adaptive_agent.py --source document.pdf --characteristic anchors")
+        return 1
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return 1
 
 if __name__ == "__main__":
+    import sys
     sys.exit(main())
-        """Calculate comprehensive metrics from vision analysis"""
-        if not vision_results:
-            return {}
-        
-        total = len(vision_results)
-        
-        # Content verification metrics
-        contains_target = sum(1 for result in vision_results 
-                            if result.get('content_verification', {}).get('contains_target_characteristic', False))
-        
-        # Visual quality metrics
-        is_visual = sum(1 for result in vision_results
-                       if result.get('visual_quality', {}).get('is_visual_content', False))
-        
-        good_readability = sum(1 for result in vision_results
-                             if result.get('visual_quality', {}).get('readability', 'poor') in ['excellent', 'good'])
-        
-        # Category matching metrics
-        category_matches = sum(1 for result in vision_results
-                             if result.get('category_match', {}).get('matches_expected_category', False))
-        
-        # Quality assessment
-        high_quality = sum(1 for result in vision_results
-                          if result.get('overall_assessment', {}).get('extraction_quality', 'poor') in ['excellent', 'good'])
-        
-        return {
-            'accuracy_rate': contains_target / total,
-            'visual_content_rate': is_visual / total,
-            'readability_rate': good_readability / total,
-            'category_match_rate': category_matches / total,
-            'high_quality_rate': high_quality / total,
-            'total_analyzed': total
-        }
-    
-    def _assess_visual_quality(self, vision_results: List[Dict]) -> Dict:
-        """Assess overall visual quality of extractions"""
-        content_types = {}
-        readability_levels = {}
-        
-        for result in vision_results:
-            vq = result.get('visual_quality', {})
-            
-            content_type = vq.get('content_type', 'unknown')
-            content_types[content_type] = content_types.get(content_type, 0) + 1
-            
-            readability = vq.get('readability', 'unknown')
-            readability_levels[readability] = readability_levels.get(readability, 0) + 1
-        
-        return {
-            'content_type_distribution': content_types,
-            'readability_distribution': readability_levels,
-            'dominant_content_type': max(content_types.items(), key=lambda x: x[1])[0] if content_types else 'unknown'
-        }
-    
-    def _assess_detection_methods(self, vision_results: List[Dict]) -> Dict:
-        """Assess effectiveness of detection methods"""
-        method_effectiveness = {}
-        
-        for result in vision_results:
-            dm = result.get('detection_method_assessment', {})
-            original_method = result.get('original_section_metadata', {}).get('detection_method', 'unknown')
-            
-            effectiveness = dm.get('method_effectiveness', 'unknown')
-            
-            if original_method not in method_effectiveness:
-                method_effectiveness[original_method] = []
-            method_effectiveness[original_method].append(effectiveness)
-        
-        # Calculate average effectiveness per method
-        method_scores = {}
-        effectiveness_values = {'excellent': 4, 'good': 3, 'fair': 2, 'poor': 1, 'unknown': 1}
-        
-        for method, scores in method_effectiveness.items():
-            if scores:
-                avg_score = sum(effectiveness_values.get(score, 1) for score in scores) / len(scores)
-                method_scores[method] = {
-                    'average_score': avg_score,
-                    'sample_size': len(scores),
-                    'effectiveness_rating': self._score_to_rating(avg_score)
-                }
-        
-        return method_scores
-    
-    def _score_to_rating(self, score: float) -> str:
-        """Convert numeric score to rating"""
-        if score >= 3.5:
-            return 'excellent'
-        elif score >= 2.5:
-            return 'good'
-        elif score >= 1.5:
-            return 'fair'
-        else:
-            return 'poor'
-    
-    def _assess_category_matching(self, vision_results: List[Dict]) -> Dict:
-        """Assess category matching performance"""
-        matching_performance = {
-            'total_matches': 0,
-            'total_items': len(vision_results),
-            'suggested_categories': {}
-        }
-        
-        for result in vision_results:
-            cm = result.get('category_match', {})
-            
-            if cm.get('matches_expected_category', False):
-                matching_performance['total_matches'] += 1
-            
-            suggested = cm.get('actual_category_suggestion', 'unknown')
-            if suggested != 'unknown':
-                matching_performance['suggested_categories'][suggested] = \
-                    matching_performance['suggested_categories'].get(suggested, 0) + 1
-        
-        matching_performance['match_rate'] = (
-            matching_performance['total_matches'] / matching_performance['total_items']
-            if matching_performance['total_items'] > 0 else 0
-        )
-        
-        return matching_performance
-    
-    def _generate_enhanced_parameter_recommendations(self, extraction_data: Dict, 
-                                                   analysis_metrics: Dict, current_params: Dict, 
-                                                   debug: bool) -> Dict:
-        """Generate intelligent parameter recommendations based on enhanced analysis"""
-        recommendations = {}
-        reasoning = []
-        
-        accuracy_rate = analysis_metrics.get('accuracy_rate', 0)
-        visual_content_rate = analysis_metrics.get('visual_content_rate', 0)
-        category_match_rate = analysis_metrics.get('category_match_rate', 0)
-        high_quality_rate = analysis_metrics.get('high_quality_rate', 0)
-        
-        total_extracted = extraction_data.get('total_sections', 0)
-        
-        # Enhanced logic based on multiple metrics
-        if accuracy_rate < 0.4:
-            # Low accuracy - increase selectivity
-            recommendations['confidence_threshold'] = 0.7
-            recommendations['min_region_size'] = 12000
-            reasoning.append(f"Low accuracy ({accuracy_rate:.1%}) - increasing selectivity")
-        
-        elif visual_content_rate < 0.5:
-            # Extracting too much non-visual content
-            recommendations['confidence_threshold'] = 0.65
-            reasoning.append(f"Low visual content rate ({visual_content_rate:.1%}) - focusing on visual elements")
-        
-        elif category_match_rate < 0.3:
-            # Poor category matching
-            recommendations['similarity_threshold'] = 0.7
-            reasoning.append(f"Poor category matching ({category_match_rate:.1%}) - increasing similarity requirements")
-        
-        elif total_extracted > 30:
-            # Too many extractions
-            recommendations['confidence_threshold'] = 0.6
-            recommendations['min_region_size'] = 15000
-            reasoning.append(f"High extraction count ({total_extracted}) - increasing filters")
-        
-        elif total_extracted < 2 and accuracy_rate > 0.7:
-            # Very few but high quality extractions - could be more permissive
-            recommendations['confidence_threshold'] = 0.45
-            recommendations['min_region_size'] = 8000
-            reasoning.append(f"Few high-quality extractions ({total_extracted}) - slightly reducing barriers")
-        
-        elif high_quality_rate > 0.8 and total_extracted < 5:
-            # High quality but few extractions
-            recommendations['confidence_threshold'] = 0.5
-            reasoning.append(f"High quality rate ({high_quality_rate:.1%}) but few items - reducing threshold")
-        
-        return {
-            'adjustments': recommendations,
-            'reasoning': '; '.join(reasoning) if reasoning else 'Analysis indicates current parameters are appropriate',
-            'analysis_based_on': {
-                'accuracy_rate': accuracy_rate,
-                'visual_content_rate': visual_content_rate,
-                'category_match_rate': category_match_rate,
-                'high_quality_rate': high_quality_rate,
-                'total_extracted': total_extracted
-            }
-        }
-    
-    def _enhanced_fallback_analysis(self, extraction_data: Dict, debug: bool) -> Dict:
-        """Enhanced fallback without vision"""
-        print("  🔧 Running enhanced fallback analysis...")
-        
-        sections = extraction_data.get('extracted_sections', [])
-        current_params = extraction_data.get('parameters_used', {})
-        
-        # Enhanced heuristic analysis based on metadata
-        fallback_metrics = self._calculate_fallback_metrics(sections)
-        param_recommendations = self._fallback_parameter_recommendations(fallback_metrics, current_params)
-        
-        return {
-            'document_id': extraction_data.get('document_id', 'unknown'),
-            'timestamp': datetime.now().isoformat(),
-            'enhanced_fallback_analysis': fallback_metrics,
-            'parameter_recommendations': param_recommendations,
-            'llm_available': False,
-            'llm_actually_used': False,
-            'analysis_method': 'enhanced_fallback_heuristic',
-            'analysis_version': '2.0_fallback'
-        }
-    
-    def _calculate_
